@@ -16,7 +16,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { name } = body
+    const { name, totalInvested, annualRate, investmentYears } = body
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -30,6 +30,9 @@ export async function POST(request: Request) {
       data: {
         name,
         order: (maxOrder._max.order || 0) + 1,
+        totalInvested: totalInvested || null,
+        annualRate: annualRate || null,
+        investmentYears: investmentYears || null,
       },
     })
 
@@ -43,15 +46,22 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const body = await request.json()
-    const { id, name } = body
+    const { id, name, totalInvested, annualRate, investmentYears } = body
 
-    if (!id || !name) {
-      return NextResponse.json({ error: 'ID and name are required' }, { status: 400 })
+    if (!id) {
+      return NextResponse.json({ error: 'ID is required' }, { status: 400 })
     }
+
+    // Build update data object with only provided fields
+    const updateData: Record<string, unknown> = {}
+    if (name !== undefined) updateData.name = name
+    if (totalInvested !== undefined) updateData.totalInvested = totalInvested
+    if (annualRate !== undefined) updateData.annualRate = annualRate
+    if (investmentYears !== undefined) updateData.investmentYears = investmentYears
 
     const type = await prisma.investmentType.update({
       where: { id },
-      data: { name },
+      data: updateData,
     })
 
     return NextResponse.json(type)

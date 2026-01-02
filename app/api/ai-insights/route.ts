@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import OpenAI from 'openai'
 import { prisma } from '@/lib/db'
 import {
@@ -13,6 +13,8 @@ import {
   type GoalsContext,
   type LoansContext,
 } from '@/lib/ai-prompts'
+
+const validSections: InsightSection[] = ['dashboard', 'expenses', 'income', 'investments', 'goals', 'loans']
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -286,7 +288,8 @@ async function gatherInvestmentsContext(year: number, month: number): Promise<In
     orderBy: { order: 'asc' },
   })
 
-  const totalInvestments = types.reduce((sum, type) => sum + (type.investments[0]?.amount || 0), 0)
+  const totalMonthlyInvestments = types.reduce((sum, type) => sum + (type.investments[0]?.amount || 0), 0)
+  const totalInvested = types.reduce((sum, type) => sum + (type.totalInvested || 0), 0)
 
   // Get income for investment rate
   const income = await prisma.income.aggregate({
@@ -294,7 +297,7 @@ async function gatherInvestmentsContext(year: number, month: number): Promise<In
     _sum: { amount: true },
   })
   const totalIncome = income._sum.amount || 0
-  const investmentRate = totalIncome > 0 ? (totalInvestments / totalIncome) * 100 : 0
+  const investmentRate = totalIncome > 0 ? (totalMonthlyInvestments / totalIncome) * 100 : 0
 
   // Yearly totals
   const yearlyInvestments = await prisma.investment.aggregate({
@@ -336,22 +339,46 @@ async function gatherInvestmentsContext(year: number, month: number): Promise<In
       : `${((emergencyGoal.currentAmount / emergencyTarget) * 100).toFixed(0)}% cile`
     : 'Neni nastaven'
 
+  // Calculate projection for each investment type
+  const typesWithProjections = types.map((t) => {
+    const monthlyAmount = t.investments[0]?.amount || 0
+    let projectedFinalValue: number | null = null
+    let projectedGain: number | null = null
+
+    if (t.totalInvested && t.annualRate && t.investmentYears && t.totalInvested > 0) {
+      const monthlyRate = t.annualRate / 12
+      const months = t.investmentYears * 12
+      const principalFV = t.totalInvested * Math.pow(1 + monthlyRate, months)
+      const contributionsFV = months > 0
+        ? monthlyAmount * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate)
+        : 0
+      projectedFinalValue = Math.round(principalFV + contributionsFV)
+      const totalContributions = t.totalInvested + monthlyAmount * 12 * t.investmentYears
+      projectedGain = Math.round(projectedFinalValue - totalContributions)
+    }
+
+    return {
+      name: t.name,
+      monthlyAmount,
+      totalInvested: t.totalInvested,
+      annualRate: t.annualRate,
+      investmentYears: t.investmentYears,
+      projectedFinalValue,
+      projectedGain,
+    }
+  })
+
   return {
     year,
     month,
-    totalInvestments,
+    totalMonthlyInvestments,
+    totalInvested,
     investmentRate,
-    types: types
-      .map((t) => ({
-        name: t.name,
-        amount: t.investments[0]?.amount || 0,
-        percentOfTotal: totalInvestments > 0 ? ((t.investments[0]?.amount || 0) / totalInvestments) * 100 : 0,
-      }))
-      .filter((t) => t.amount > 0),
+    types: typesWithProjections,
     yearlyTotal,
     yearlyAverage,
     monthlyExpenses,
-    investToExpenseRatio: monthlyExpenses > 0 ? totalInvestments / monthlyExpenses : 0,
+    investToExpenseRatio: monthlyExpenses > 0 ? totalMonthlyInvestments / monthlyExpenses : 0,
     emergencyFundStatus,
   }
 }
@@ -467,13 +494,55 @@ async function gatherContextForSection(
   }
 }
 
+// GET - Fetch cached insight from database (instant)
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams
+    const section = searchParams.get('section') as InsightSection
+    const year = parseInt(searchParams.get('year') || '')
+    const month = parseInt(searchParams.get('month') || '')
+
+    // Validate params
+    if (!section || !validSections.includes(section)) {
+      return NextResponse.json({ error: 'Invalid section' }, { status: 400 })
+    }
+    if (isNaN(year) || isNaN(month)) {
+      return NextResponse.json({ error: 'Invalid year or month' }, { status: 400 })
+    }
+
+    // Fetch from database
+    const cached = await prisma.cachedInsight.findUnique({
+      where: {
+        section_year_month: { section, year, month }
+      }
+    })
+
+    if (!cached) {
+      return NextResponse.json({ cached: null })
+    }
+
+    // Parse the stored JSON insights
+    const insights: InsightResponse = JSON.parse(cached.insights)
+
+    return NextResponse.json({
+      cached: {
+        section: cached.section,
+        insights,
+        generatedAt: cached.generatedAt.toISOString(),
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching cached insight:', error)
+    return NextResponse.json({ error: 'Failed to fetch cached insight' }, { status: 500 })
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body: InsightRequest = await request.json()
     const { section, year, month, forceRefresh } = body
 
     // Validate section
-    const validSections: InsightSection[] = ['dashboard', 'expenses', 'income', 'investments', 'goals', 'loans']
     if (!validSections.includes(section)) {
       return NextResponse.json({ error: 'Invalid section' }, { status: 400 })
     }
@@ -528,14 +597,33 @@ export async function POST(request: Request) {
       }, { status: 500 })
     }
 
-    // Build result and cache it
+    // Build result and cache it (both in-memory and database)
+    const generatedAt = new Date()
     const result: AIInsightResult = {
       section,
       insights,
-      generatedAt: new Date().toISOString(),
+      generatedAt: generatedAt.toISOString(),
       cached: false,
     }
     insightCache.set(cacheKey, { data: result, expiresAt: Date.now() + CACHE_TTL_MS })
+
+    // Save to database for persistent caching
+    await prisma.cachedInsight.upsert({
+      where: {
+        section_year_month: { section, year, month }
+      },
+      update: {
+        insights: JSON.stringify(insights),
+        generatedAt,
+      },
+      create: {
+        section,
+        year,
+        month,
+        insights: JSON.stringify(insights),
+        generatedAt,
+      },
+    })
 
     return NextResponse.json(result)
   } catch (error) {

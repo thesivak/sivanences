@@ -67,10 +67,13 @@ model Income {
 
 // Investment types (e.g., Zlato, Penzijni)
 model InvestmentType {
-  id          String       @id @default(cuid())
-  name        String       @unique
-  order       Int          @default(0)
-  investments Investment[]
+  id              String       @id @default(cuid())
+  name            String       @unique
+  order           Int          @default(0)
+  totalInvested   Float?       // Total amount already invested (principal)
+  annualRate      Float?       // Expected annual return rate (e.g., 0.07 for 7%)
+  investmentYears Int?         // Investment horizon in years
+  investments     Investment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -146,4 +149,33 @@ model LoanScenario {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Active loans (existing loans being paid off)
+model ActiveLoan {
+  id              String   @id @default(cuid())
+  name            String
+  type            String   // "MORTGAGE" | "CONSUMER"
+  originalAmount  Float    // Original loan amount
+  remainingAmount Float    // Current balance (updated manually or calculated)
+  interestRate    Float    // Annual interest rate (%)
+  monthlyPayment  Float    // Monthly payment amount
+  startDate       DateTime // When the loan started
+  termMonths      Int      // Original term in months
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Cached AI insights for instant loading
+model CachedInsight {
+  id          String   @id @default(cuid())
+  section     String   // 'dashboard' | 'expenses' | 'income' | 'investments' | 'goals' | 'loans'
+  year        Int
+  month       Int
+  insights    String   // JSON stringified InsightResponse
+  generatedAt DateTime @default(now())
+
+  @@unique([section, year, month])
+  @@index([section, year, month])
 }

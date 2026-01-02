@@ -7,8 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { formatCurrency, formatMonth, getCurrentPeriod } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { AlertCircle, TrendingUp, Wallet, PiggyBank } from 'lucide-react'
-import { AiInsightCard } from '@/components/ai-insight-card'
+import { AlertCircle, TrendingUp, Wallet, PiggyBank, CreditCard } from 'lucide-react'
+import { IncomeBreakdown } from '@/components/income-breakdown'
+import { InsightsPrefetcher } from '@/components/insights-prefetcher'
+import { ExecutiveSummaryCard } from '@/components/executive-summary-card'
 
 interface CategoryExpense {
   id: string
@@ -38,12 +40,23 @@ interface SavingGoal {
   recommendedTarget?: number
 }
 
+interface ActiveLoan {
+  id: string
+  name: string
+  type: string
+  monthlyPayment: number
+  calculatedBalance: number
+  paidOffPercent: number
+}
+
 interface SummaryData {
   year: number
   month: number
   totalIncome: number
   totalExpenses: number
   totalInvestments: number
+  totalLoanPayments: number
+  totalLoanBalance: number
   balance: number
   previousMonth: {
     totalIncome: number
@@ -54,6 +67,7 @@ interface SummaryData {
   incomeSources: IncomeSource[]
   investmentTypes: InvestmentType[]
   savingGoals: SavingGoal[]
+  activeLoans: ActiveLoan[]
   avgMonthlyExpenses: number
 }
 
@@ -110,6 +124,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* Prefetch AI insights for all sections in background */}
+      <InsightsPrefetcher year={period.year} month={period.month} />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -124,7 +141,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Main Stats */}
-      <div className="grid grid-cols-4 gap-4 opacity-0 animate-fade-in">
+      <div className={cn(
+        "grid gap-4 opacity-0 animate-fade-in",
+        (data.totalLoanPayments > 0) ? "grid-cols-5" : "grid-cols-4"
+      )}>
         <StatCard
           label="Prijmy"
           value={data.totalIncome || 0}
@@ -143,6 +163,13 @@ export default function DashboardPage() {
           previousValue={data.previousMonth?.totalInvestments}
           type="investment"
         />
+        {(data.totalLoanPayments > 0) && (
+          <StatCard
+            label="Splatky pujcek"
+            value={data.totalLoanPayments}
+            type="expense"
+          />
+        )}
         <StatCard
           label="Bilance"
           value={data.balance || 0}
@@ -152,7 +179,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Secondary Content */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className={cn(
+        "grid gap-6",
+        (data.activeLoans?.length > 0) ? "grid-cols-3" : "grid-cols-2"
+      )}>
         {/* Top Expenses */}
         <Card className="opacity-0 animate-fade-in stagger-2">
           <CardHeader className="pb-3">
@@ -183,6 +213,46 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Active Loans Summary */}
+        {(data.activeLoans?.length > 0) && (
+          <Card className="opacity-0 animate-fade-in stagger-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base font-medium">
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
+                Aktivni pujcky
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4 rounded-lg bg-muted/50 p-3">
+                <div className="text-sm text-muted-foreground">Celkem k splaceni</div>
+                <div className="font-mono-numbers text-xl font-semibold">
+                  {formatCurrency(data.totalLoanBalance, false)}
+                </div>
+              </div>
+              <div className="space-y-3">
+                {data.activeLoans.slice(0, 4).map((loan) => (
+                  <div key={loan.id} className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium">{loan.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {loan.paidOffPercent.toFixed(0)}% splaceno
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-mono-numbers text-sm">
+                        {formatCurrency(loan.monthlyPayment, false)}/mes
+                      </div>
+                      <div className="font-mono-numbers text-xs text-muted-foreground">
+                        {formatCurrency(loan.calculatedBalance, false)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Saving Goals */}
         <Card className="opacity-0 animate-fade-in stagger-3">
@@ -241,34 +311,7 @@ export default function DashboardPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {(data.incomeSources || []).every((s) => !s.income?.amount) ? (
-            <p className="text-sm text-muted-foreground">Zadne prijmy tento mesic</p>
-          ) : (
-            <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
-              {(data.incomeSources || [])
-                .filter((s) => s.income?.amount)
-                .map((source) => (
-                  <div key={source.id} className="flex items-center gap-3">
-                    <div
-                      className={cn(
-                        'h-3 w-3 rounded-full',
-                        source.name === 'Mzda'
-                          ? 'bg-chart-1'
-                          : source.name === 'Bonusy'
-                            ? 'bg-chart-2'
-                            : 'bg-chart-3'
-                      )}
-                    />
-                    <div>
-                      <div className="text-sm text-muted-foreground">{source.name}</div>
-                      <div className="font-mono-numbers text-lg font-semibold whitespace-nowrap">
-                        {formatCurrency(source.income?.amount || 0, false)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          )}
+          <IncomeBreakdown sources={data.incomeSources || []} />
         </CardContent>
       </Card>
 
@@ -295,9 +338,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* AI Insights */}
-      <AiInsightCard
-        section="dashboard"
+      {/* AI Insights - Executive Summary */}
+      <ExecutiveSummaryCard
         year={period.year}
         month={period.month}
         className="stagger-6"

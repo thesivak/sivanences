@@ -50,6 +50,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from 'recharts'
 
@@ -57,6 +58,9 @@ interface InvestmentTypeData {
   id: string
   name: string
   order: number
+  totalInvested: number | null
+  annualRate: number | null
+  investmentYears: number | null
   investment: {
     id: string
     amount: number
@@ -71,8 +75,36 @@ interface InvestmentData {
 
 interface CompoundDataPoint {
   year: number
-  value: number
-  interest: number
+  [key: string]: number // Dynamic keys for each investment type
+}
+
+// Calculate compound interest with monthly contributions
+function calculateCompoundGrowth(
+  initialAmount: number,
+  monthlyContribution: number,
+  annualRate: number,
+  years: number
+): CompoundDataPoint[] {
+  const data: CompoundDataPoint[] = []
+  const monthlyRate = annualRate / 12
+
+  for (let year = 0; year <= years; year++) {
+    const months = year * 12
+    // Future value of initial principal
+    const principalFV = initialAmount * Math.pow(1 + monthlyRate, months)
+    // Future value of monthly contributions (annuity)
+    const contributionsFV = months > 0
+      ? monthlyContribution * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate)
+      : 0
+    const totalValue = Math.round(principalFV + contributionsFV)
+
+    data.push({
+      year,
+      value: totalValue,
+    })
+  }
+
+  return data
 }
 
 export default function InvestmentsPage() {
@@ -86,10 +118,10 @@ export default function InvestmentsPage() {
   const [newTypeName, setNewTypeName] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  // Compound interest calculator state
-  const [compoundInitial, setCompoundInitial] = useState('')
-  const [compoundRate, setCompoundRate] = useState('')
-  const [compoundYears, setCompoundYears] = useState('10')
+  // Edit row state (all fields)
+  const [editTotalInvested, setEditTotalInvested] = useState('')
+  const [editAnnualRate, setEditAnnualRate] = useState('')
+  const [editYears, setEditYears] = useState('')
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -111,34 +143,54 @@ export default function InvestmentsPage() {
   const handleEditStart = (type: InvestmentTypeData) => {
     setEditingId(type.id)
     setEditValue(type.investment?.amount?.toString() || '')
+    setEditTotalInvested(type.totalInvested?.toString() || '')
+    setEditAnnualRate(type.annualRate ? (type.annualRate * 100).toString() : '')
+    setEditYears(type.investmentYears?.toString() || '')
   }
 
   const handleEditCancel = () => {
     setEditingId(null)
     setEditValue('')
+    setEditTotalInvested('')
+    setEditAnnualRate('')
+    setEditYears('')
   }
 
   const handleEditSave = async (typeId: string) => {
     const amount = parseCurrencyInput(editValue)
-    if (amount === null) {
-      handleEditCancel()
-      return
-    }
 
     try {
-      await fetch('/api/investments', {
-        method: 'POST',
+      // Save monthly investment amount
+      if (amount !== null) {
+        await fetch('/api/investments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            typeId,
+            year: period.year,
+            month: period.month,
+            amount,
+          }),
+        })
+      }
+
+      // Save investment type settings
+      const totalInvested = editTotalInvested ? parseFloat(editTotalInvested) : null
+      const annualRate = editAnnualRate ? parseFloat(editAnnualRate) / 100 : null
+      const investmentYears = editYears ? parseInt(editYears) : null
+
+      await fetch('/api/investments/types', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          typeId,
-          year: period.year,
-          month: period.month,
-          amount,
+          id: typeId,
+          totalInvested,
+          annualRate,
+          investmentYears,
         }),
       })
 
-      setEditingId(null)
-      setEditValue('')
+      handleEditCancel()
       fetchData()
     } catch (error) {
       console.error('Failed to save investment:', error)
@@ -208,42 +260,61 @@ export default function InvestmentsPage() {
     }
   }
 
-  const totalInvestments = data?.types.reduce((sum, t) => sum + (t.investment?.amount || 0), 0) || 0
+  const totalMonthlyInvestments = data?.types.reduce((sum, t) => sum + (t.investment?.amount || 0), 0) || 0
+  const totalInvested = data?.types.reduce((sum, t) => sum + (t.totalInvested || 0), 0) || 0
 
-  // Calculate compound interest data
-  const compoundData = useMemo((): CompoundDataPoint[] => {
-    const initial = parseFloat(compoundInitial)
-    const rate = parseFloat(compoundRate) / 100
-    const years = parseInt(compoundYears)
+  // Get investments that have all data for projections
+  const investmentsWithProjections = useMemo(() => {
+    if (!data) return []
+    return data.types.filter(
+      (t) => t.totalInvested && t.annualRate && t.investmentYears && t.totalInvested > 0
+    )
+  }, [data])
 
-    if (!initial || !rate || !years || initial <= 0 || rate <= 0 || years <= 0) {
-      return []
-    }
+  // Calculate combined chart data for all investments
+  const chartData = useMemo(() => {
+    if (investmentsWithProjections.length === 0) return []
 
+    // Find the maximum investment horizon
+    const maxYears = Math.max(...investmentsWithProjections.map((t) => t.investmentYears || 0))
+
+    // Build chart data with a row per year
     const data: CompoundDataPoint[] = []
-    for (let year = 0; year <= years; year++) {
-      const value = initial * Math.pow(1 + rate, year)
-      const interest = value - initial
-      data.push({
-        year,
-        value: Math.round(value),
-        interest: Math.round(interest),
-      })
-    }
-    return data
-  }, [compoundInitial, compoundRate, compoundYears])
+    for (let year = 0; year <= maxYears; year++) {
+      const point: CompoundDataPoint = { year }
 
-  // Summary stats for compound interest
-  const compoundSummary = useMemo(() => {
-    if (compoundData.length === 0) return null
-    const initial = parseFloat(compoundInitial)
-    const final = compoundData[compoundData.length - 1]
-    return {
-      finalValue: final.value,
-      totalInterest: final.interest,
-      multiplier: (final.value / initial).toFixed(2),
+      investmentsWithProjections.forEach((type) => {
+        const years = type.investmentYears || 0
+        if (year <= years) {
+          const monthlyRate = (type.annualRate || 0) / 12
+          const months = year * 12
+          const monthlyContribution = type.investment?.amount || 0
+          const initialAmount = type.totalInvested || 0
+
+          const principalFV = initialAmount * Math.pow(1 + monthlyRate, months)
+          const contributionsFV = months > 0
+            ? monthlyContribution * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate)
+            : 0
+
+          point[type.name] = Math.round(principalFV + contributionsFV)
+        }
+      })
+
+      data.push(point)
     }
-  }, [compoundData, compoundInitial])
+
+    return data
+  }, [investmentsWithProjections])
+
+  // Chart colors - easily distinguishable
+  const chartColors = [
+    '#2563EB', // Blue
+    '#F59E0B', // Amber/Orange
+    '#10B981', // Emerald/Green
+    '#8B5CF6', // Purple
+    '#EF4444', // Red
+    '#06B6D4', // Cyan
+  ]
 
   return (
     <div className="space-y-8">
@@ -260,24 +331,39 @@ export default function InvestmentsPage() {
         />
       </div>
 
-      {/* Total Investments Card */}
-      <Card className="opacity-0 animate-fade-in">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="opacity-0 animate-fade-in">
+          <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#37474F]/10">
                 <TrendingUp className="h-6 w-6 text-[#37474F]" />
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Celkove investice</div>
+                <div className="text-sm text-muted-foreground">Mesicni investice</div>
                 <div className="font-mono-numbers text-2xl font-semibold text-[#37474F]">
-                  {formatCurrency(totalInvestments, false)}
+                  {formatCurrency(totalMonthlyInvestments, false)}
                 </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        <Card className="opacity-0 animate-fade-in stagger-1">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#1B5E20]/10">
+                <Calculator className="h-6 w-6 text-[#1B5E20]" />
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Celkem investovano</div>
+                <div className="font-mono-numbers text-2xl font-semibold text-[#1B5E20]">
+                  {formatCurrency(totalInvested, false)}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Investments Table */}
       <Card className="opacity-0 animate-fade-in stagger-2">
@@ -329,8 +415,11 @@ export default function InvestmentsPage() {
                 <TableRow>
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Typ</TableHead>
-                  <TableHead className="text-right">Castka</TableHead>
-                  <TableHead className="w-24"></TableHead>
+                  <TableHead className="text-right">Mesicni</TableHead>
+                  <TableHead className="text-right">Celkem</TableHead>
+                  <TableHead className="text-right">Vynos</TableHead>
+                  <TableHead className="text-right">Roky</TableHead>
+                  <TableHead className="w-28"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -364,7 +453,7 @@ export default function InvestmentsPage() {
                         <Input
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          className="h-8 w-32 text-right font-mono-numbers ml-auto"
+                          className="h-8 w-24 text-right font-mono-numbers ml-auto"
                           autoFocus
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleEditSave(type.id)
@@ -374,13 +463,77 @@ export default function InvestmentsPage() {
                       ) : (
                         <span
                           className={cn(
-                            'font-mono-numbers',
+                            'font-mono-numbers cursor-pointer hover:text-primary',
                             type.investment?.amount ? 'text-[#37474F]' : 'text-muted-foreground'
                           )}
+                          onClick={() => handleEditStart(type)}
                         >
                           {type.investment?.amount
                             ? formatCurrency(type.investment.amount, false)
                             : '-'}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {editingId === type.id ? (
+                        <Input
+                          value={editTotalInvested}
+                          onChange={(e) => setEditTotalInvested(e.target.value)}
+                          className="h-8 w-24 text-right font-mono-numbers ml-auto"
+                          placeholder="0"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleEditSave(type.id)
+                            if (e.key === 'Escape') handleEditCancel()
+                          }}
+                        />
+                      ) : (
+                        <span className={cn(
+                          'font-mono-numbers',
+                          type.totalInvested ? 'text-[#1B5E20]' : 'text-muted-foreground'
+                        )}>
+                          {type.totalInvested ? formatCurrency(type.totalInvested, false) : '-'}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {editingId === type.id ? (
+                        <Input
+                          value={editAnnualRate}
+                          onChange={(e) => setEditAnnualRate(e.target.value)}
+                          className="h-8 w-16 text-right font-mono-numbers ml-auto"
+                          placeholder="7"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleEditSave(type.id)
+                            if (e.key === 'Escape') handleEditCancel()
+                          }}
+                        />
+                      ) : (
+                        <span className={cn(
+                          'font-mono-numbers',
+                          type.annualRate ? '' : 'text-muted-foreground'
+                        )}>
+                          {type.annualRate ? `${(type.annualRate * 100).toFixed(1)}%` : '-'}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {editingId === type.id ? (
+                        <Input
+                          value={editYears}
+                          onChange={(e) => setEditYears(e.target.value)}
+                          className="h-8 w-14 text-right font-mono-numbers ml-auto"
+                          placeholder="10"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleEditSave(type.id)
+                            if (e.key === 'Escape') handleEditCancel()
+                          }}
+                        />
+                      ) : (
+                        <span className={cn(
+                          'font-mono-numbers',
+                          type.investmentYears ? '' : 'text-muted-foreground'
+                        )}>
+                          {type.investmentYears ? `${type.investmentYears}` : '-'}
                         </span>
                       )}
                     </TableCell>
@@ -453,137 +606,119 @@ export default function InvestmentsPage() {
         </CardContent>
       </Card>
 
-      {/* Compound Interest Calculator */}
-      <Card className="opacity-0 animate-fade-in stagger-3">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base font-medium">
-            <Calculator className="h-4 w-4 text-muted-foreground" />
-            Kalkulacka slozeneho uroku
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {/* Inputs */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="compound-initial">Pocatecni investice (Kc)</Label>
-                <Input
-                  id="compound-initial"
-                  type="number"
-                  value={compoundInitial}
-                  onChange={(e) => setCompoundInitial(e.target.value)}
-                  placeholder="100000"
-                  className="font-mono-numbers"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="compound-rate">Rocni vynosnost (%)</Label>
-                <Input
-                  id="compound-rate"
-                  type="number"
-                  step="0.1"
-                  value={compoundRate}
-                  onChange={(e) => setCompoundRate(e.target.value)}
-                  placeholder="7"
-                  className="font-mono-numbers"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="compound-years">Pocet let</Label>
-                <Select value={compoundYears} onValueChange={setCompoundYears}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[5, 10, 15, 20, 25, 30].map((y) => (
-                      <SelectItem key={y} value={y.toString()}>
-                        {y} let
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Summary Stats */}
-              {compoundSummary && (
-                <div className="mt-6 space-y-3 rounded-lg border bg-muted/50 p-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Konecna hodnota:</span>
-                    <span className="font-mono-numbers font-semibold text-[#1B5E20]">
-                      {formatCurrency(compoundSummary.finalValue, false)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Celkovy zisk:</span>
-                    <span className="font-mono-numbers font-semibold text-[#1B5E20]">
-                      {formatCurrency(compoundSummary.totalInterest, false)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Nasobek investice:</span>
-                    <span className="font-mono-numbers font-semibold">
-                      {compoundSummary.multiplier}x
-                    </span>
-                  </div>
-                </div>
-              )}
+      {/* Investment Projections */}
+      {investmentsWithProjections.length > 0 && (
+        <Card className="opacity-0 animate-fade-in stagger-3">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base font-medium">
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              Projekce rustu investic
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-96">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E3DC" />
+                  <XAxis
+                    dataKey="year"
+                    tickFormatter={(v) => `${v}. rok`}
+                    stroke="#6B6B6B"
+                    fontSize={12}
+                  />
+                  <YAxis
+                    tickFormatter={(v) => {
+                      if (v >= 1000000) return `${(v / 1000000).toFixed(1)}M`
+                      if (v >= 1000) return `${(v / 1000).toFixed(0)}k`
+                      return v.toString()
+                    }}
+                    stroke="#6B6B6B"
+                    fontSize={12}
+                  />
+                  <Tooltip
+                    formatter={(value) => [formatCurrency(Number(value) || 0, false), '']}
+                    labelFormatter={(label) => `${label}. rok`}
+                    contentStyle={{
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E5E3DC',
+                      borderRadius: '4px',
+                    }}
+                  />
+                  <Legend />
+                  {investmentsWithProjections.map((type, index) => (
+                    <Line
+                      key={type.id}
+                      type="monotone"
+                      dataKey={type.name}
+                      name={type.name}
+                      stroke={chartColors[index % chartColors.length]}
+                      strokeWidth={2}
+                      dot={{ fill: chartColors[index % chartColors.length], strokeWidth: 0, r: 3 }}
+                      activeDot={{ r: 5 }}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
             </div>
 
-            {/* Chart */}
-            <div className="lg:col-span-2">
-              {compoundData.length > 0 ? (
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={compoundData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E3DC" />
-                      <XAxis
-                        dataKey="year"
-                        tickFormatter={(v) => `${v}. rok`}
-                        stroke="#6B6B6B"
-                        fontSize={12}
-                      />
-                      <YAxis
-                        tickFormatter={(v) => {
-                          if (v >= 1000000) return `${(v / 1000000).toFixed(1)}M`
-                          if (v >= 1000) return `${(v / 1000).toFixed(0)}k`
-                          return v.toString()
-                        }}
-                        stroke="#6B6B6B"
-                        fontSize={12}
-                      />
-                      <Tooltip
-                        formatter={(value) => [formatCurrency(Number(value) || 0, false), 'Hodnota']}
-                        labelFormatter={(label) => `${label}. rok`}
-                        contentStyle={{
-                          backgroundColor: '#FFFFFF',
-                          border: '1px solid #E5E3DC',
-                          borderRadius: '4px',
-                        }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="value"
-                        name="Hodnota investice"
-                        stroke="#1B5E20"
-                        strokeWidth={2}
-                        dot={{ fill: '#1B5E20', strokeWidth: 0, r: 3 }}
-                        activeDot={{ r: 5 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="flex h-80 items-center justify-center rounded-lg border border-dashed">
-                  <div className="text-center text-muted-foreground">
-                    <TrendingUp className="mx-auto h-12 w-12 opacity-50" />
-                    <p className="mt-2">Zadejte pocatecni investici a rocni vynosnost</p>
+            {/* Summary per investment */}
+            <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {investmentsWithProjections.map((type, index) => {
+                const years = type.investmentYears || 0
+                const finalData = chartData.find((d) => d.year === years)
+                const finalValue = finalData ? finalData[type.name] : 0
+                const totalContributions = (type.totalInvested || 0) + (type.investment?.amount || 0) * 12 * years
+                const totalGain = finalValue - totalContributions
+
+                return (
+                  <div
+                    key={type.id}
+                    className="rounded-lg border p-4"
+                    style={{ borderLeftColor: chartColors[index % chartColors.length], borderLeftWidth: 4 }}
+                  >
+                    <div className="font-medium">{type.name}</div>
+                    <div className="mt-2 space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Konecna hodnota:</span>
+                        <span className="font-mono-numbers font-semibold text-[#1B5E20]">
+                          {formatCurrency(finalValue, false)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Celkovy vklad:</span>
+                        <span className="font-mono-numbers">
+                          {formatCurrency(totalContributions, false)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Zisk z uroku:</span>
+                        <span className="font-mono-numbers text-[#1B5E20]">
+                          +{formatCurrency(totalGain, false)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                )
+              })}
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Empty state for projections */}
+      {investmentsWithProjections.length === 0 && data && data.types.length > 0 && (
+        <Card className="opacity-0 animate-fade-in stagger-3">
+          <CardContent className="py-12 text-center">
+            <TrendingUp className="mx-auto h-12 w-12 text-muted-foreground/50" />
+            <p className="mt-4 text-muted-foreground">
+              Pro zobrazeni projekci rustu nastavte u investic celkovou castku, ocekavany vynos a horizont.
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Kliknete na ikonu <Pencil className="inline h-4 w-4" /> pro upravu investice.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* AI Insights */}
       <AiInsightCard

@@ -78,9 +78,18 @@ export interface IncomeContext {
 export interface InvestmentsContext {
   year: number
   month: number
-  totalInvestments: number
+  totalMonthlyInvestments: number
+  totalInvested: number
   investmentRate: number
-  types: Array<{ name: string; amount: number; percentOfTotal: number }>
+  types: Array<{
+    name: string
+    monthlyAmount: number
+    totalInvested: number | null
+    annualRate: number | null
+    investmentYears: number | null
+    projectedFinalValue: number | null
+    projectedGain: number | null
+  }>
   yearlyTotal: number
   yearlyAverage: number
   monthlyExpenses: number
@@ -119,6 +128,19 @@ export interface LoansContext {
   }>
   currentDebtToIncomeRatio: number
   safetyMargin: number
+}
+
+// Executive summary context - combines insights from all sections
+export interface ExecutiveSummaryContext {
+  year: number
+  month: number
+  sectionInsights: {
+    expenses?: InsightResponse
+    income?: InsightResponse
+    investments?: InsightResponse
+    goals?: InsightResponse
+    loans?: InsightResponse
+  }
 }
 
 export type ContextType =
@@ -248,21 +270,45 @@ Zamer se na: stabilitu prijmu, diverzifikaci, a potencial pro zvyseni.`
 
 function buildInvestmentsPrompt(context: InvestmentsContext): string {
   const typesList = context.types
-    .map(t => `- ${t.name}: ${t.amount} Kc (${t.percentOfTotal.toFixed(1)}%)`)
+    .map(t => {
+      let line = `- ${t.name}: mesicne ${t.monthlyAmount} Kc`
+      if (t.totalInvested) {
+        line += `, celkem vlozeno ${t.totalInvested} Kc`
+      }
+      if (t.annualRate) {
+        line += `, vynos ${(t.annualRate * 100).toFixed(1)}%`
+      }
+      if (t.investmentYears) {
+        line += `, horizont ${t.investmentYears} let`
+      }
+      if (t.projectedFinalValue && t.projectedGain) {
+        line += `\n  PROJEKCE: konecna hodnota ${t.projectedFinalValue} Kc (zisk ${t.projectedGain} Kc)`
+      }
+      return line
+    })
     .join('\n')
+
+  const typesWithProjections = context.types.filter(t => t.projectedFinalValue)
+  const totalProjectedValue = typesWithProjections.reduce((sum, t) => sum + (t.projectedFinalValue || 0), 0)
+  const totalProjectedGain = typesWithProjections.reduce((sum, t) => sum + (t.projectedGain || 0), 0)
 
   return `${BASE_PROMPT}
 SEKCE: Analyza investic
 
 DATA ZA ${formatPeriod(context.year, context.month)}:
-Celkove mesicni investice: ${context.totalInvestments} Kc
+Celkove mesicni investice: ${context.totalMonthlyInvestments} Kc
+Celkem jiz investovano: ${context.totalInvested} Kc
 Pomer investic k prijmum: ${context.investmentRate.toFixed(1)}%
 
 INVESTICE PODLE TYPU:
 ${typesList || '- Zadne investice'}
 
+${typesWithProjections.length > 0 ? `SOUHRNNA PROJEKCE VSECH INVESTIC:
+- Ocekavana konecna hodnota: ${totalProjectedValue} Kc
+- Ocekavany celkovy zisk z uroku: ${totalProjectedGain} Kc
+` : ''}
 ROCNI SOUHRN (${context.year}):
-- Celkem investovano: ${context.yearlyTotal} Kc
+- Celkem investovano letos: ${context.yearlyTotal} Kc
 - Prumerny mesicni vklad: ${context.yearlyAverage.toFixed(0)} Kc
 
 POROVNANI S VYDAJI:
@@ -273,7 +319,7 @@ OBECNE DOPORUCENI PRO CESKO:
 - Doporuceny podil investic: 10-20% cistych prijmu
 - Nouzovy fond: ${context.emergencyFundStatus}
 
-Zamer se na: dostatecnost investic, diverzifikaci portfolia, a dlouhodobe cile.`
+Zamer se na: dostatecnost investic, diverzifikaci portfolia, dlouhodobe cile, a silu slozeneho uroceni.`
 }
 
 function buildGoalsPrompt(context: GoalsContext): string {
@@ -306,6 +352,49 @@ MESICNI KAPACITA PRO SPORENI:
 - Volne prostredky po vydajich: ${context.availableForSaving} Kc
 
 Zamer se na: prioritizaci cilu, tempo sporeni, a strategii pro dosazeni cilu.`
+}
+
+function buildExecutiveSummaryPrompt(context: ExecutiveSummaryContext): string {
+  const { sectionInsights } = context
+
+  const formatSection = (name: string, insight?: InsightResponse) => {
+    if (!insight) return `${name}: Nedostupne`
+    return `${name} (zdravi: ${insight.healthScore}/100 - ${insight.healthLabel}):
+  Shrnutí: ${insight.summary}
+  Vzorce: ${insight.patterns.join('; ')}
+  Doporuceni: ${insight.recommendations.join('; ')}`
+  }
+
+  return `${BASE_PROMPT}
+SEKCE: Vykonny souhrn - prehled vsech financnich oblasti
+
+Tvym ukolem je vytvorit VYKONNY SOUHRN, ktery shrne vsechny nasledujici detailni analyzy do jednoho konzistentniho prehledu.
+
+ANALYZY JEDNOTLIVYCH SEKCI:
+
+1. VYDAJE:
+${formatSection('Vydaje', sectionInsights.expenses)}
+
+2. PRIJMY:
+${formatSection('Prijmy', sectionInsights.income)}
+
+3. INVESTICE:
+${formatSection('Investice', sectionInsights.investments)}
+
+4. SPORICI CILE:
+${formatSection('Cile', sectionInsights.goals)}
+
+5. PUJCKY:
+${formatSection('Pujcky', sectionInsights.loans)}
+
+INSTRUKCE PRO VYKONNY SOUHRN:
+- Zamer se na CELKOVY financni obraz, ne na jednotlive detaily
+- Identifikuj NEJDULEZITEJSI 2-3 vzorce naprec vsemi sekcemi
+- Navrhni 2-3 PRIORITNI akce, ktere maji nejvetsi dopad
+- Urcil celkove financni zdravi na zaklade vsech sekci
+- Bud strucny a akcne orientovany
+
+Celkove healthScore vypocitej jako vazeny prumer vsech sekci (vydaje 25%, prijmy 25%, investice 20%, cile 15%, pujcky 15%).`
 }
 
 function buildLoansPrompt(context: LoansContext): string {
@@ -359,6 +448,11 @@ export function buildPromptForSection(section: InsightSection, context: ContextT
     default:
       throw new Error(`Unknown section: ${section}`)
   }
+}
+
+// Export executive summary prompt builder
+export function buildExecutiveSummary(context: ExecutiveSummaryContext): string {
+  return buildExecutiveSummaryPrompt(context)
 }
 
 // Parse Claude's JSON response

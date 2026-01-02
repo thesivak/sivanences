@@ -24,6 +24,9 @@ export async function GET(request: Request) {
         id: t.id,
         name: t.name,
         order: t.order,
+        totalInvested: t.totalInvested,
+        annualRate: t.annualRate,
+        investmentYears: t.investmentYears,
         investment: t.investments[0] || null,
       })),
     }

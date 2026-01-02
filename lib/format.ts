@@ -60,15 +60,6 @@ export function formatMonth(year: number, month: number): string {
 }
 
 /**
- * Get short month name in Czech
- * Example: 1 -> "Led"
- */
-export function getShortMonthName(month: number): string {
-  const date = new Date(2024, month - 1, 1)
-  return new Intl.DateTimeFormat('cs-CZ', { month: 'short' }).format(date)
-}
-
-/**
  * Get full month name in Czech
  * Example: 1 -> "Leden"
  */

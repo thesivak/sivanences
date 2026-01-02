@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { Plus, Minus, Target, Shield, PiggyBank } from 'lucide-react'
+import { Plus, Minus, Target, Shield, PiggyBank, Pencil, Trash2 } from 'lucide-react'
 import { AiInsightCard } from '@/components/ai-insight-card'
 import { getCurrentPeriod } from '@/lib/format'
 
@@ -56,6 +56,16 @@ export default function GoalsPage() {
     targetAmount: '',
     isEmergency: false,
   })
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editGoal, setEditGoal] = useState<{
+    id: string
+    name: string
+    currentAmount: string
+    targetAmount: string
+    isEmergency: boolean
+  } | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [goalToDelete, setGoalToDelete] = useState<SavingGoal | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -125,6 +135,61 @@ export default function GoalsPage() {
     setSelectedGoal(goal)
     setTransactionType(type)
     setTransactionDialogOpen(true)
+  }
+
+  const openEditDialog = (goal: SavingGoal) => {
+    setEditGoal({
+      id: goal.id,
+      name: goal.name,
+      currentAmount: goal.currentAmount.toString(),
+      targetAmount: goal.targetAmount?.toString() || '',
+      isEmergency: goal.isEmergency,
+    })
+    setEditDialogOpen(true)
+  }
+
+  const handleEditGoal = async () => {
+    if (!editGoal || !editGoal.name.trim()) return
+
+    try {
+      await fetch(`/api/goals/${editGoal.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editGoal.name.trim(),
+          currentAmount: editGoal.currentAmount ? parseFloat(editGoal.currentAmount) : 0,
+          targetAmount: editGoal.targetAmount ? parseFloat(editGoal.targetAmount) : null,
+          isEmergency: editGoal.isEmergency,
+        }),
+      })
+
+      setEditDialogOpen(false)
+      setEditGoal(null)
+      fetchData()
+    } catch (error) {
+      console.error('Failed to update goal:', error)
+    }
+  }
+
+  const openDeleteDialog = (goal: SavingGoal) => {
+    setGoalToDelete(goal)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteGoal = async () => {
+    if (!goalToDelete) return
+
+    try {
+      await fetch(`/api/goals/${goalToDelete.id}`, {
+        method: 'DELETE',
+      })
+
+      setDeleteDialogOpen(false)
+      setGoalToDelete(null)
+      fetchData()
+    } catch (error) {
+      console.error('Failed to delete goal:', error)
+    }
   }
 
   const totalSaved = data?.goals.reduce((sum, g) => sum + g.currentAmount, 0) || 0
@@ -242,15 +307,35 @@ export default function GoalsPage() {
             >
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-base font-medium">
-                  {goal.isEmergency ? (
-                    <Shield className="h-4 w-4 text-[#37474F]" />
-                  ) : (
-                    <Target className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  {goal.name}
-                  {goal.isEmergency && (
-                    <span className="text-xs font-normal text-muted-foreground">(Nouzovy)</span>
-                  )}
+                  <div className="flex items-center gap-2 flex-1">
+                    {goal.isEmergency ? (
+                      <Shield className="h-4 w-4 text-[#37474F]" />
+                    ) : (
+                      <Target className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    {goal.name}
+                    {goal.isEmergency && (
+                      <span className="text-xs font-normal text-muted-foreground">(Nouzovy)</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => openEditDialog(goal)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      onClick={() => openDeleteDialog(goal)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -380,6 +465,86 @@ export default function GoalsPage() {
             <Button onClick={handleTransaction} disabled={!transactionAmount}>
               {transactionType === 'deposit' ? 'Vlozit' : 'Vybrat'}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upravit cil</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Nazev cile</Label>
+              <Input
+                id="edit-name"
+                value={editGoal?.name || ''}
+                onChange={(e) => setEditGoal(editGoal ? { ...editGoal, name: e.target.value } : null)}
+                placeholder="napr. Dovolena"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-current">Aktualni castka</Label>
+              <Input
+                id="edit-current"
+                type="number"
+                value={editGoal?.currentAmount || ''}
+                onChange={(e) => setEditGoal(editGoal ? { ...editGoal, currentAmount: e.target.value } : null)}
+                placeholder="0"
+                className="font-mono-numbers"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-target">Cilova castka (volitelne)</Label>
+              <Input
+                id="edit-target"
+                type="number"
+                value={editGoal?.targetAmount || ''}
+                onChange={(e) => setEditGoal(editGoal ? { ...editGoal, targetAmount: e.target.value } : null)}
+                placeholder="50000"
+                className="font-mono-numbers"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="edit-emergency"
+                checked={editGoal?.isEmergency || false}
+                onChange={(e) => setEditGoal(editGoal ? { ...editGoal, isEmergency: e.target.checked } : null)}
+                className="h-4 w-4 rounded border-border"
+              />
+              <Label htmlFor="edit-emergency" className="text-sm font-normal">
+                Nouzovy fond
+              </Label>
+            </div>
+            <Button onClick={handleEditGoal} disabled={!editGoal?.name.trim()}>
+              Ulozit zmeny
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Smazat cil</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <p className="text-muted-foreground">
+              Opravdu chcete smazat cil <span className="font-medium text-foreground">{goalToDelete?.name}</span>?
+              Tato akce je nevratna a smaze i vsechny transakce spojene s timto cilem.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                Zrusit
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteGoal}>
+                Smazat
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

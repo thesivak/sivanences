@@ -151,27 +151,6 @@
     letter-spacing: -0.02em;
   }
 
-  /* Financial number styling */
-  .amount {
-    font-family: var(--font-jetbrains);
-    font-feature-settings: 'tnum' 1;
-    letter-spacing: -0.02em;
-  }
-
-  .amount-positive {
-    font-family: var(--font-jetbrains);
-    font-feature-settings: 'tnum' 1;
-    letter-spacing: -0.02em;
-    color: var(--positive);
-  }
-
-  .amount-negative {
-    font-family: var(--font-jetbrains);
-    font-feature-settings: 'tnum' 1;
-    letter-spacing: -0.02em;
-    color: var(--negative);
-  }
-
   /* Card hover effect */
   .card-hover {
     transition: all 0.2s ease;
@@ -182,75 +161,6 @@
     transform: translateY(-1px);
   }
 
-  /* Subtle divider line */
-  .divider {
-    height: 1px;
-    background: linear-gradient(to right, transparent, var(--border), transparent);
-  }
-
-  /* Table number alignment */
-  .tabular-nums {
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* Verdict badges */
-  .verdict-available {
-    background-color: rgba(27, 94, 32, 0.1);
-    color: #1B5E20;
-    border: 1px solid rgba(27, 94, 32, 0.2);
-  }
-
-  .verdict-risky {
-    background-color: rgba(255, 152, 0, 0.1);
-    color: #E65100;
-    border: 1px solid rgba(255, 152, 0, 0.2);
-  }
-
-  .verdict-not-recommended {
-    background-color: rgba(183, 28, 28, 0.1);
-    color: #B71C1C;
-    border: 1px solid rgba(183, 28, 28, 0.2);
-  }
-
-  /* Subtle paper texture overlay */
-  .paper-texture {
-    position: relative;
-  }
-
-  .paper-texture::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-    opacity: 0.015;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* Focus ring for accessibility */
-  .focus-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
-  }
-
-  /* Animated underline for links */
-  .link-underline {
-    position: relative;
-  }
-
-  .link-underline::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    width: 0;
-    height: 1px;
-    background: currentColor;
-    transition: width 0.2s ease;
-  }
-
-  .link-underline:hover::after {
-    width: 100%;
-  }
 }
 
 /* Custom scrollbar */
@@ -299,23 +209,8 @@
   }
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
 .animate-fade-in {
   animation: fadeIn 0.3s ease forwards;
-}
-
-.animate-slide-in {
-  animation: slideIn 0.3s ease forwards;
 }
 
 /* Stagger animation delays */
@@ -325,3 +220,19 @@
 .stagger-4 { animation-delay: 0.2s; }
 .stagger-5 { animation-delay: 0.25s; }
 .stagger-6 { animation-delay: 0.3s; }
+
+/* Slide in from right animation for sidebar */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease forwards;
+}

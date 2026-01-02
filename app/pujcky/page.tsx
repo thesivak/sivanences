@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { formatCurrency, formatPercent } from '@/lib/format'
+import { formatCurrency } from '@/lib/format'
 import {
   calculateLoan,
   evaluateLoan,
@@ -37,6 +37,7 @@ import {
 } from '@/lib/loan'
 import { LoanHistorySidebar } from '@/components/loan-history-sidebar'
 import { LoanCompareView } from '@/components/loan-compare-view'
+import { ActiveLoansTable, type ActiveLoanWithDetails } from '@/components/active-loans-table'
 import { cn } from '@/lib/utils'
 import {
   Calculator,
@@ -87,6 +88,10 @@ export default function LoansPage() {
   const [scenarios, setScenarios] = useState<SavedLoanScenario[]>([])
   const [selectedCompareIds, setSelectedCompareIds] = useState<string[]>([])
 
+  // Active loans state
+  const [activeLoans, setActiveLoans] = useState<ActiveLoanWithDetails[]>([])
+  const [activeLoansLoading, setActiveLoansLoading] = useState(true)
+
   // Fetch current budget data
   useEffect(() => {
     async function fetchBudget() {
@@ -116,6 +121,24 @@ export default function LoansPage() {
       }
     }
     fetchHistory()
+  }, [])
+
+  // Fetch active loans
+  const fetchActiveLoans = async () => {
+    setActiveLoansLoading(true)
+    try {
+      const res = await fetch('/api/loans/active')
+      const data = await res.json()
+      setActiveLoans(data)
+    } catch (error) {
+      console.error('Failed to fetch active loans:', error)
+    } finally {
+      setActiveLoansLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchActiveLoans()
   }, [])
 
   // Get effective rate
@@ -365,6 +388,13 @@ export default function LoansPage() {
           Vyhodnoceni dostupnosti a dopadu pujcky na vas rozpocet
         </p>
       </div>
+
+      {/* Active Loans Section */}
+      <ActiveLoansTable
+        loans={activeLoans}
+        loading={activeLoansLoading}
+        onRefresh={fetchActiveLoans}
+      />
 
       {/* Compare View */}
       {compareScenarios && (

@@ -1,5 +1,42 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { calculateLoan } from '@/lib/loan'
+
+// Calculate remaining balance based on payments made since start date
+function calculateCurrentBalance(
+  originalAmount: number,
+  interestRate: number,
+  termMonths: number,
+  startDate: Date
+): { remainingBalance: number; paymentsMade: number; monthsRemaining: number } {
+  const now = new Date()
+  const start = new Date(startDate)
+
+  const monthsElapsed =
+    (now.getFullYear() - start.getFullYear()) * 12 +
+    (now.getMonth() - start.getMonth())
+
+  const paymentsMade = Math.max(0, Math.min(monthsElapsed, termMonths))
+  const monthsRemaining = Math.max(0, termMonths - paymentsMade)
+
+  if (paymentsMade >= termMonths) {
+    return { remainingBalance: 0, paymentsMade, monthsRemaining: 0 }
+  }
+
+  const loanResult = calculateLoan({
+    amount: originalAmount,
+    annualRate: interestRate / 100,
+    termMonths,
+  })
+
+  if (paymentsMade === 0) {
+    return { remainingBalance: originalAmount, paymentsMade, monthsRemaining }
+  }
+
+  const remainingBalance = loanResult.amortization[paymentsMade - 1]?.balance ?? 0
+
+  return { remainingBalance, paymentsMade, monthsRemaining }
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -74,6 +111,31 @@ export async function GET(request: Request) {
       orderBy: { order: 'asc' },
     })
 
+    // Get active loans with calculated balances
+    const activeLoansRaw = await prisma.activeLoan.findMany({
+      orderBy: { createdAt: 'desc' },
+    })
+
+    const activeLoans = activeLoansRaw.map(loan => {
+      const { remainingBalance, paymentsMade, monthsRemaining } = calculateCurrentBalance(
+        loan.originalAmount,
+        loan.interestRate,
+        loan.termMonths,
+        loan.startDate
+      )
+
+      return {
+        ...loan,
+        calculatedBalance: remainingBalance,
+        paymentsMade,
+        monthsRemaining,
+        paidOffPercent: ((loan.originalAmount - remainingBalance) / loan.originalAmount) * 100,
+      }
+    })
+
+    const totalLoanPayments = activeLoans.reduce((sum, loan) => sum + loan.monthlyPayment, 0)
+    const totalLoanBalance = activeLoans.reduce((sum, loan) => sum + loan.calculatedBalance, 0)
+
     // Calculate 3-month average expenses for emergency fund recommendation
     const last3MonthsExpenses = await prisma.expense.groupBy({
       by: ['year', 'month'],
@@ -92,7 +154,10 @@ export async function GET(request: Request) {
       totalIncome,
       totalExpenses,
       totalInvestments,
-      balance: totalIncome - totalExpenses - totalInvestments,
+      totalLoanPayments,
+      totalLoanBalance,
+      // Balance now includes loan payments
+      balance: totalIncome - totalExpenses - totalInvestments - totalLoanPayments,
       previousMonth: {
         totalIncome: prevIncome._sum.amount || 0,
         totalExpenses: prevExpenses._sum.amount || 0,
@@ -122,6 +187,7 @@ export async function GET(request: Request) {
         progress: goal.targetAmount ? (goal.currentAmount / goal.targetAmount) * 100 : 0,
         recommendedTarget: goal.isEmergency ? avgMonthlyExpenses * 3 : undefined,
       })),
+      activeLoans,
       avgMonthlyExpenses,
     })
   } catch (error) {

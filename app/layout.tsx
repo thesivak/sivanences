@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import './globals.css'
 import { SidebarNav } from '@/components/sidebar-nav'
+import { MainLayout } from '@/components/main-layout'
 
 export const metadata: Metadata = {
   title: 'Rodinny rozpocet',
@@ -16,9 +18,9 @@ export default function RootLayout({
     <html lang="cs">
       <body className="antialiased">
         <SidebarNav />
-        <main className="ml-56 min-h-screen">
-          <div className="px-8 py-8">{children}</div>
-        </main>
+        <Suspense fallback={null}>
+          <MainLayout>{children}</MainLayout>
+        </Suspense>
       </body>
     </html>
   )
