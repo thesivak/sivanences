@@ -1,0 +1,149 @@
+// Prisma schema for Czech Family Budget Application
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Expense categories (flat list, 10-20 items)
+model Category {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  icon     String?
+  order    Int       @default(0)
+  expenses Expense[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Monthly expense totals by category
+model Expense {
+  id         String   @id @default(cuid())
+  amount     Float
+  year       Int
+  month      Int      // 1-12
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([categoryId, year, month])
+  @@index([year, month])
+}
+
+// Income sources
+model IncomeSource {
+  id      String   @id @default(cuid())
+  name    String   @unique
+  order   Int      @default(0)
+  incomes Income[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Monthly income by source
+model Income {
+  id       String       @id @default(cuid())
+  amount   Float
+  year     Int
+  month    Int          // 1-12
+  source   IncomeSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  sourceId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sourceId, year, month])
+  @@index([year, month])
+}
+
+// Investment types (e.g., Zlato, Penzijni)
+model InvestmentType {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  order       Int          @default(0)
+  investments Investment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Monthly investment amounts by type
+model Investment {
+  id     String         @id @default(cuid())
+  amount Float
+  year   Int
+  month  Int            // 1-12
+  type   InvestmentType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  typeId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([typeId, year, month])
+  @@index([year, month])
+}
+
+// Saving goals / Funds
+model SavingGoal {
+  id            String             @id @default(cuid())
+  name          String
+  targetAmount  Float?
+  currentAmount Float              @default(0)
+  isEmergency   Boolean            @default(false) // Emergency fund flag
+  order         Int                @default(0)
+  transactions  FundTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Fund transactions (deposits/withdrawals)
+model FundTransaction {
+  id           String     @id @default(cuid())
+  amount       Float      // positive = deposit, negative = withdrawal
+  description  String?
+  date         DateTime   @default(now())
+  savingGoal   SavingGoal @relation(fields: [savingGoalId], references: [id], onDelete: Cascade)
+  savingGoalId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([savingGoalId])
+  @@index([date])
+}
+
+// Saved loan scenarios for comparison
+model LoanScenario {
+  id              String  @id @default(cuid())
+  name            String
+  amount          Float
+  interestRate    Float
+  termMonths      Int
+  type            String  // "MORTGAGE" | "CONSUMER"
+  monthlyPayment  Float
+  totalPayment    Float
+  totalInterest   Float
+
+  // Verdict/evaluation data
+  verdictStatus   String?  // "AVAILABLE" | "RISKY" | "NOT_RECOMMENDED"
+  verdictLabel    String?  // Czech label
+  verdictReason   String?  // Explanation text
+  budgetImpact    Float?   // Percentage of monthly income
+
+  // Budget context at time of analysis
+  budgetIncome    Float?
+  budgetExpenses  Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

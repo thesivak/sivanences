@@ -1,0 +1,52 @@
+{
+    "prijmy": {
+      "Zapfloor": 200000,
+      "Rodicovska": 6250,
+      "Hosting": 4000,
+      "Matthew": 65000,
+      "Mamka energie": 3000,
+      "Matthew na domacnost": 10000,
+      "Maruska najem": 10000
+    },
+    "vydaje": {
+      "Potraviny + domacnost": 48000,
+      "Pujcka 2.500.000": 16609,
+      "Leasing auta": 22415,
+      "Mamka splatka": 10000,
+      "Pipalovi": 500,
+      "Joshuar": 1000,
+      "Imran": 10050,
+      "Posilovna": 1500,
+      "Apple": 1217,
+      "Cez elektrina": 3000,
+      "Voda": 3000,
+      "Sara skola": 4000,
+      "Miriam obedy": 1000,
+      "Vodafone": 2500,
+      "Vodafone - Matthew": 800,
+      "1Password": 180,
+      "YouTube Premium": 179,
+      "Depilace": 500,
+      "Filtry": 2660,
+      "Alza iPhone - Matthew": 832,
+      "Adobe - Matthew": 450,
+      "AI tools": 6000,
+      "Digital Ocean": 900,
+      "Alza Dell monitor": 1103,
+      "Alza iPad - Matthew": 617,
+      "Alza Apple Studio display": 957,
+      "Alza Macbook": 2800,
+      "Alza Macbook - Matthew": 1608,
+      "CSSZ zaloha": 13561,
+      "CPZP zaloha": 5700,
+      "CPZP splatky": 1500,
+      "CSSZ splatky": 1313,
+      "iDoklad": 480,
+      "Laravel Forge": 400,
+      "Resend": 500
+    },
+    "investice": {
+      "Zlato": 10000,
+      "Penzijni": 3000
+    }
+  }
