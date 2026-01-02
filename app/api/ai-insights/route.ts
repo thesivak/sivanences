@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server'
-import { exec } from 'child_process'
-import { promisify } from 'util'
-import { writeFile, unlink } from 'fs/promises'
-import { tmpdir } from 'os'
-import { join } from 'path'
+import OpenAI from 'openai'
 import { prisma } from '@/lib/db'
 import {
   buildPromptForSection,
@@ -18,7 +14,10 @@ import {
   type LoansContext,
 } from '@/lib/ai-prompts'
 
-const execAsync = promisify(exec)
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPEN_AI_API,
+})
 
 // In-memory cache with TTL
 interface CacheEntry {
@@ -56,29 +55,14 @@ function getCachedInsight(key: string): AIInsightResult | null {
   return null
 }
 
-// Execute Claude CLI with timeout (default 120s for complex prompts)
-async function generateInsight(prompt: string, timeoutMs: number = 120000): Promise<string> {
-  // Write prompt to temp file to avoid shell escaping issues with long prompts
-  const tempFile = join(tmpdir(), `ai-insight-${Date.now()}.txt`)
+// Generate insight using OpenAI GPT-5 mini via Responses API
+async function generateInsight(prompt: string): Promise<string> {
+  const response = await openai.responses.create({
+    model: 'gpt-5-mini',
+    input: prompt,
+  })
 
-  try {
-    await writeFile(tempFile, prompt, 'utf-8')
-
-    const { stdout } = await execAsync(`cat "${tempFile}" | claude -p --model haiku`, {
-      timeout: timeoutMs,
-      maxBuffer: 1024 * 1024, // 1MB buffer
-      env: { ...process.env, TERM: 'dumb' }, // Disable color output
-    })
-
-    return stdout.trim()
-  } finally {
-    // Clean up temp file
-    try {
-      await unlink(tempFile)
-    } catch {
-      // Ignore cleanup errors
-    }
-  }
+  return response.output_text?.trim() || ''
 }
 
 // Context gathering functions for each section
@@ -509,19 +493,27 @@ export async function POST(request: Request) {
     // Build prompt
     const prompt = buildPromptForSection(section, context)
 
-    // Execute Claude with timeout (120s)
+    // Call OpenAI API
     let rawOutput: string
     try {
-      rawOutput = await generateInsight(prompt, 120000)
-    } catch (execError) {
-      const error = execError as NodeJS.ErrnoException & { killed?: boolean }
-      if (error.killed || error.code === 'ETIMEDOUT') {
-        return NextResponse.json({ error: 'AI generovani trvalo prilis dlouho' }, { status: 504 })
+      rawOutput = await generateInsight(prompt)
+    } catch (apiError) {
+      console.error('OpenAI API error:', apiError)
+      const error = apiError as Error & { status?: number; message?: string }
+      if (error.status === 429) {
+        return NextResponse.json({ error: 'Prilis mnoho pozadavku, zkuste pozdeji' }, { status: 429 })
       }
-      if (error.code === 'ENOENT') {
-        return NextResponse.json({ error: 'Claude CLI neni nainstalovano' }, { status: 500 })
+      if (error.status === 401) {
+        return NextResponse.json({ error: 'Neplatny API klic' }, { status: 401 })
       }
-      throw error
+      if (error.status === 404) {
+        return NextResponse.json({ error: 'Model nenalezen - zkontrolujte nazev modelu' }, { status: 404 })
+      }
+      // Return the actual error message for debugging
+      return NextResponse.json({
+        error: 'Chyba pri volani AI API',
+        details: error.message || String(apiError)
+      }, { status: 500 })
     }
 
     // Parse JSON from output

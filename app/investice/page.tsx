@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { MonthSelector } from '@/components/month-selector'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -32,10 +32,26 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { formatCurrency, formatMonth, getCurrentPeriod, parseCurrencyInput } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { Check, X, Pencil, Plus, TrendingUp, Trash2 } from 'lucide-react'
+import { Check, X, Pencil, Plus, TrendingUp, Trash2, Calculator } from 'lucide-react'
 import { AiInsightCard } from '@/components/ai-insight-card'
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts'
 
 interface InvestmentTypeData {
   id: string
@@ -53,6 +69,12 @@ interface InvestmentData {
   types: InvestmentTypeData[]
 }
 
+interface CompoundDataPoint {
+  year: number
+  value: number
+  interest: number
+}
+
 export default function InvestmentsPage() {
   const [period, setPeriod] = useState(getCurrentPeriod())
   const [data, setData] = useState<InvestmentData | null>(null)
@@ -63,6 +85,11 @@ export default function InvestmentsPage() {
   const [editNameValue, setEditNameValue] = useState('')
   const [newTypeName, setNewTypeName] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
+
+  // Compound interest calculator state
+  const [compoundInitial, setCompoundInitial] = useState('')
+  const [compoundRate, setCompoundRate] = useState('')
+  const [compoundYears, setCompoundYears] = useState('10')
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -182,6 +209,41 @@ export default function InvestmentsPage() {
   }
 
   const totalInvestments = data?.types.reduce((sum, t) => sum + (t.investment?.amount || 0), 0) || 0
+
+  // Calculate compound interest data
+  const compoundData = useMemo((): CompoundDataPoint[] => {
+    const initial = parseFloat(compoundInitial)
+    const rate = parseFloat(compoundRate) / 100
+    const years = parseInt(compoundYears)
+
+    if (!initial || !rate || !years || initial <= 0 || rate <= 0 || years <= 0) {
+      return []
+    }
+
+    const data: CompoundDataPoint[] = []
+    for (let year = 0; year <= years; year++) {
+      const value = initial * Math.pow(1 + rate, year)
+      const interest = value - initial
+      data.push({
+        year,
+        value: Math.round(value),
+        interest: Math.round(interest),
+      })
+    }
+    return data
+  }, [compoundInitial, compoundRate, compoundYears])
+
+  // Summary stats for compound interest
+  const compoundSummary = useMemo(() => {
+    if (compoundData.length === 0) return null
+    const initial = parseFloat(compoundInitial)
+    const final = compoundData[compoundData.length - 1]
+    return {
+      finalValue: final.value,
+      totalInterest: final.interest,
+      multiplier: (final.value / initial).toFixed(2),
+    }
+  }, [compoundData, compoundInitial])
 
   return (
     <div className="space-y-8">
@@ -391,12 +453,144 @@ export default function InvestmentsPage() {
         </CardContent>
       </Card>
 
+      {/* Compound Interest Calculator */}
+      <Card className="opacity-0 animate-fade-in stagger-3">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base font-medium">
+            <Calculator className="h-4 w-4 text-muted-foreground" />
+            Kalkulacka slozeneho uroku
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {/* Inputs */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="compound-initial">Pocatecni investice (Kc)</Label>
+                <Input
+                  id="compound-initial"
+                  type="number"
+                  value={compoundInitial}
+                  onChange={(e) => setCompoundInitial(e.target.value)}
+                  placeholder="100000"
+                  className="font-mono-numbers"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="compound-rate">Rocni vynosnost (%)</Label>
+                <Input
+                  id="compound-rate"
+                  type="number"
+                  step="0.1"
+                  value={compoundRate}
+                  onChange={(e) => setCompoundRate(e.target.value)}
+                  placeholder="7"
+                  className="font-mono-numbers"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="compound-years">Pocet let</Label>
+                <Select value={compoundYears} onValueChange={setCompoundYears}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[5, 10, 15, 20, 25, 30].map((y) => (
+                      <SelectItem key={y} value={y.toString()}>
+                        {y} let
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Summary Stats */}
+              {compoundSummary && (
+                <div className="mt-6 space-y-3 rounded-lg border bg-muted/50 p-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Konecna hodnota:</span>
+                    <span className="font-mono-numbers font-semibold text-[#1B5E20]">
+                      {formatCurrency(compoundSummary.finalValue, false)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Celkovy zisk:</span>
+                    <span className="font-mono-numbers font-semibold text-[#1B5E20]">
+                      {formatCurrency(compoundSummary.totalInterest, false)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Nasobek investice:</span>
+                    <span className="font-mono-numbers font-semibold">
+                      {compoundSummary.multiplier}x
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Chart */}
+            <div className="lg:col-span-2">
+              {compoundData.length > 0 ? (
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={compoundData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E3DC" />
+                      <XAxis
+                        dataKey="year"
+                        tickFormatter={(v) => `${v}. rok`}
+                        stroke="#6B6B6B"
+                        fontSize={12}
+                      />
+                      <YAxis
+                        tickFormatter={(v) => {
+                          if (v >= 1000000) return `${(v / 1000000).toFixed(1)}M`
+                          if (v >= 1000) return `${(v / 1000).toFixed(0)}k`
+                          return v.toString()
+                        }}
+                        stroke="#6B6B6B"
+                        fontSize={12}
+                      />
+                      <Tooltip
+                        formatter={(value) => [formatCurrency(Number(value) || 0, false), 'Hodnota']}
+                        labelFormatter={(label) => `${label}. rok`}
+                        contentStyle={{
+                          backgroundColor: '#FFFFFF',
+                          border: '1px solid #E5E3DC',
+                          borderRadius: '4px',
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="value"
+                        name="Hodnota investice"
+                        stroke="#1B5E20"
+                        strokeWidth={2}
+                        dot={{ fill: '#1B5E20', strokeWidth: 0, r: 3 }}
+                        activeDot={{ r: 5 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="flex h-80 items-center justify-center rounded-lg border border-dashed">
+                  <div className="text-center text-muted-foreground">
+                    <TrendingUp className="mx-auto h-12 w-12 opacity-50" />
+                    <p className="mt-2">Zadejte pocatecni investici a rocni vynosnost</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* AI Insights */}
       <AiInsightCard
         section="investments"
         year={period.year}
         month={period.month}
-        className="stagger-3"
+        className="stagger-4"
       />
     </div>
   )

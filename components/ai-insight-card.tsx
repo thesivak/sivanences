@@ -48,7 +48,8 @@ export function AiInsightCard({ section, year, month, className }: AiInsightCard
 
         if (!response.ok) {
           const data = await response.json()
-          throw new Error(data.error || 'Chyba pri generovani')
+          const errorMsg = data.details ? `${data.error}: ${data.details}` : data.error
+          throw new Error(errorMsg || 'Chyba pri generovani')
         }
 
         const data: AIInsightResult = await response.json()
@@ -112,7 +113,7 @@ export function AiInsightCard({ section, year, month, className }: AiInsightCard
             <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
             <div className="h-4 w-2/3 animate-pulse rounded bg-muted" />
             <p className="mt-4 text-xs text-muted-foreground">
-              Generuji AI postrehy... (muze trvat az 2 minuty)
+              Generuji AI postrehy...
             </p>
           </div>
         )}
