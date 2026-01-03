@@ -61,6 +61,7 @@ This document describes the technical architecture, technology stack, and projec
 | Next.js API Routes | 16.x | Backend API endpoints |
 | Prisma | 5.22.0 | Database ORM |
 | better-sqlite3 | 12.5.0 | SQLite driver |
+| OpenAI SDK | 6.15.0 | AI insights (optional) |
 
 ### Database
 
@@ -101,6 +102,12 @@ sivanences/
 │   │   ├── loans/                # Loan scenarios CRUD
 │   │   │   ├── route.ts          # Saved scenarios
 │   │   │   └── active/           # Active loans
+│   │   ├── ai/                   # AI-powered insights
+│   │   │   ├── insights/         # Financial analysis
+│   │   │   └── feedback/         # User feedback
+│   │   ├── settings/             # App settings
+│   │   │   ├── household/        # Household config
+│   │   │   └── sidebar/          # UI state
 │   │   ├── summary/              # Dashboard data aggregation
 │   │   ├── history/              # Transaction history
 │   │   └── export/               # Data export
@@ -133,10 +140,14 @@ sivanences/
 │
 ├── lib/                          # Utilities & Helpers
 │   ├── db.ts                     # Prisma client singleton
+│   ├── api.ts                    # API response helpers
 │   ├── format.ts                 # Czech formatting utilities
 │   ├── loan.ts                   # Loan calculations
+│   ├── investment.ts             # Investment projections
 │   ├── types.ts                  # Shared TypeScript types
 │   ├── utils.ts                  # General utilities
+│   ├── sidebar-context.tsx       # Sidebar state context
+│   ├── hooks/                    # Custom React hooks
 │   └── generated/prisma/         # Generated Prisma client
 │
 ├── prisma/
@@ -150,7 +161,6 @@ sivanences/
 ├── .env                          # Environment variables
 ├── next.config.ts                # Next.js configuration
 ├── tsconfig.json                 # TypeScript configuration
-├── tailwind.config.ts            # Tailwind configuration
 ├── vitest.config.ts              # Test configuration
 ├── package.json                  # Dependencies
 └── components.json               # shadcn/ui configuration

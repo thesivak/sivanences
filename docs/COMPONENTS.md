@@ -8,7 +8,7 @@ Documentation for React components used in the Rodinny Rozpocet application.
 
 ```
 components/
-├── ui/                    # Base UI components (shadcn/ui)
+├── ui/                           # Base UI components (shadcn/ui)
 │   ├── alert-dialog.tsx
 │   ├── badge.tsx
 │   ├── button.tsx
@@ -19,18 +19,26 @@ components/
 │   ├── progress.tsx
 │   ├── select.tsx
 │   ├── separator.tsx
+│   ├── skeleton.tsx
 │   ├── table.tsx
-│   └── tabs.tsx
+│   ├── tabs.tsx
+│   └── tooltip.tsx
 │
-├── main-layout.tsx        # Page layout wrapper
-├── sidebar-nav.tsx        # Navigation sidebar
-├── month-selector.tsx     # Period selection
-├── stat-card.tsx          # Statistics display
-├── income-breakdown.tsx   # Income chart
-├── loan-compare-view.tsx  # Loan comparison
-├── active-loans-table.tsx # Active loans table
-├── add-loan-dialog.tsx    # Add loan form
-└── ...
+├── main-layout.tsx               # Page layout wrapper
+├── sidebar-nav.tsx               # Navigation sidebar
+├── page-header.tsx               # Page title and month selector
+├── month-selector.tsx            # Period selection
+├── stat-card.tsx                 # Statistics display
+├── editable-table.tsx            # Inline editing table
+├── add-item-dialog.tsx           # Generic add item dialog
+├── income-breakdown.tsx          # Income chart
+├── loan-compare-view.tsx         # Loan comparison
+├── loan-history-sidebar.tsx      # Saved loan scenarios
+├── active-loans-table.tsx        # Active loans table
+├── add-loan-dialog.tsx           # Add loan form
+├── category-insight-card.tsx     # AI category insight display
+├── ai-financial-overview.tsx     # AI insights dashboard
+└── household-settings-dialog.tsx # Household configuration
 ```
 
 ---
@@ -587,6 +595,156 @@ const handleBlur = async () => {
   className="text-right"
 />
 ```
+
+---
+
+### PageHeader
+
+Page title with integrated month selector.
+
+```tsx
+import { PageHeader } from '@/components/page-header'
+
+<PageHeader
+  title="Vydaje"
+  year={year}
+  month={month}
+  onPeriodChange={(y, m) => { setYear(y); setMonth(m) }}
+/>
+```
+
+**Props:**
+| Prop | Type | Description |
+|------|------|-------------|
+| title | string | Page title |
+| year | number | Current year |
+| month | number | Current month (1-12) |
+| onPeriodChange | (year, month) => void | Period change handler |
+
+---
+
+### EditableTable
+
+Table component with inline editing capabilities.
+
+```tsx
+import { EditableTable } from '@/components/editable-table'
+
+<EditableTable
+  items={categories}
+  year={year}
+  month={month}
+  onUpdate={handleUpdate}
+  onDelete={handleDelete}
+/>
+```
+
+**Features:**
+- Inline amount editing
+- Delete confirmation
+- Loading states
+- Czech number formatting
+
+---
+
+### AddItemDialog
+
+Generic dialog for adding new items (categories, sources, etc.).
+
+```tsx
+import { AddItemDialog } from '@/components/add-item-dialog'
+
+<AddItemDialog
+  open={isOpen}
+  onOpenChange={setIsOpen}
+  onSubmit={handleSubmit}
+  title="Pridat kategorii"
+  placeholder="Nazev kategorie"
+/>
+```
+
+**Props:**
+| Prop | Type | Description |
+|------|------|-------------|
+| open | boolean | Dialog visibility |
+| onOpenChange | (open) => void | Visibility handler |
+| onSubmit | (name) => void | Submit handler |
+| title | string | Dialog title |
+| placeholder | string | Input placeholder |
+
+---
+
+### AIFinancialOverview
+
+Dashboard component displaying AI-generated financial insights.
+
+```tsx
+import { AIFinancialOverview } from '@/components/ai-financial-overview'
+
+<AIFinancialOverview
+  year={year}
+  month={month}
+/>
+```
+
+**Props:**
+| Prop | Type | Description |
+|------|------|-------------|
+| year | number | Year for analysis |
+| month | number | Month for analysis |
+
+**Features:**
+- Financial health score display
+- Narrative summary
+- Highlights and warnings
+- Actionable suggestions
+- Feedback collection (thumbs up/down)
+- Caching with manual refresh
+
+---
+
+### CategoryInsightCard
+
+Displays AI-generated insight for a specific expense category.
+
+```tsx
+import { CategoryInsightCard } from '@/components/category-insight-card'
+
+<CategoryInsightCard
+  categoryName="Potraviny"
+  insight={categoryInsight}
+  onFeedback={handleFeedback}
+/>
+```
+
+**Props:**
+| Prop | Type | Description |
+|------|------|-------------|
+| categoryName | string | Category name |
+| insight | object | { insight, trend, benchmarkComparison } |
+| onFeedback | (isPositive) => void | Feedback handler |
+
+---
+
+### HouseholdSettingsDialog
+
+Dialog for configuring household settings.
+
+```tsx
+import { HouseholdSettingsDialog } from '@/components/household-settings-dialog'
+
+<HouseholdSettingsDialog
+  open={isOpen}
+  onOpenChange={setIsOpen}
+  onSave={handleSave}
+/>
+```
+
+**Features:**
+- Total members configuration
+- Adult/children split
+- Emergency fund target settings
+- Validation of member counts
 
 ---
 

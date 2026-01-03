@@ -528,6 +528,145 @@ Array<{
 
 ---
 
+## Settings
+
+### GET /api/settings/household
+
+Get household settings.
+
+**Response:**
+```typescript
+{
+  id: string
+  totalMembers: number
+  dependentChildren: number
+  adults: number
+  emergencyFundTarget: number | null
+  emergencyFundMonths: number
+}
+```
+
+### POST /api/settings/household
+
+Update household settings.
+
+**Request Body:**
+```typescript
+{
+  totalMembers: number      // >= 1
+  dependentChildren: number // >= 0
+  adults: number            // >= 1
+  emergencyFundTarget?: number  // Custom target in CZK (null to use months)
+  emergencyFundMonths?: number  // 1-12 (ignored if target is set)
+}
+```
+
+**Note:** `dependentChildren + adults` must equal `totalMembers`.
+
+### GET /api/settings/sidebar
+
+Get sidebar expanded state.
+
+**Response:**
+```typescript
+{
+  expanded: boolean
+}
+```
+
+### POST /api/settings/sidebar
+
+Update sidebar expanded state.
+
+**Request Body:**
+```typescript
+{
+  expanded: boolean
+}
+```
+
+---
+
+## AI Insights
+
+### GET /api/ai/insights
+
+Get AI-generated financial insights and analysis.
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| year | number | Yes | Year |
+| month | number | Yes | Month (1-12) |
+| force | boolean | No | Force regeneration (bypass cache) |
+
+**Response:**
+```typescript
+{
+  overview: {
+    healthScore: {
+      score: number        // 0-100
+      label: string        // "vyborne" | "dobre" | "uspokojive" | "rizikove" | "kriticke"
+      description: string
+    }
+    narrative: string      // Summary paragraph
+    highlights: string[]   // Positive points
+    warnings: string[]     // Areas of concern
+    suggestions: Array<{
+      id: string
+      text: string
+      impact: "vysoky" | "stredni" | "nizky"
+    }>
+  }
+  categories: Record<string, {
+    insight: string
+    trend: "up" | "down" | "stable"
+    benchmarkComparison?: string
+  }>
+  cached: boolean
+  generatedAt: string
+}
+```
+
+**Note:** Requires `OPENAI_API_KEY` environment variable. Returns 503 if not configured.
+
+### GET /api/ai/feedback
+
+Get AI feedback statistics.
+
+**Response:**
+```typescript
+{
+  feedback: Array<{
+    id: string
+    insightType: string
+    insightId: string | null
+    isPositive: boolean
+    createdAt: string
+  }>
+  stats: {
+    overview: { positive: number, negative: number }
+    category: { positive: number, negative: number }
+    suggestion: { positive: number, negative: number }
+  }
+}
+```
+
+### POST /api/ai/feedback
+
+Submit feedback on AI insights.
+
+**Request Body:**
+```typescript
+{
+  insightType: "overview" | "category" | "suggestion"
+  insightId?: string    // Optional: category name or suggestion ID
+  isPositive: boolean   // true = thumbs up, false = thumbs down
+}
+```
+
+---
+
 ## Error Handling
 
 All endpoints return appropriate HTTP status codes:
