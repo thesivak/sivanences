@@ -14,6 +14,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
+      './generated/prisma': path.resolve(__dirname, './lib/__mocks__/prisma-client.ts'),
+      '@/lib/generated/prisma': path.resolve(__dirname, './lib/__mocks__/prisma-client.ts'),
     },
   },
 })

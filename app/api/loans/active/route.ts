@@ -25,16 +25,16 @@ function calculateCurrentBalance(
     return { remainingBalance: 0, paymentsMade, monthsRemaining: 0 }
   }
 
+  if (paymentsMade === 0) {
+    return { remainingBalance: originalAmount, paymentsMade, monthsRemaining }
+  }
+
   // Calculate amortization to find current balance
   const loanResult = calculateLoan({
     amount: originalAmount,
     annualRate: interestRate / 100, // Convert from percentage
     termMonths,
   })
-
-  if (paymentsMade === 0) {
-    return { remainingBalance: originalAmount, paymentsMade, monthsRemaining }
-  }
 
   // Get balance after payments made
   const remainingBalance = loanResult.amortization[paymentsMade - 1]?.balance ?? 0

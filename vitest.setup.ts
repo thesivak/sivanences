@@ -2,6 +2,15 @@ import '@testing-library/jest-dom/vitest'
 import { vi, beforeEach } from 'vitest'
 import { resetPrismaMocks } from './lib/__mocks__/db'
 
+// Mock the generated Prisma client (prevent import errors)
+vi.mock('./lib/generated/prisma', () => ({
+  PrismaClient: vi.fn(() => ({})),
+}))
+
+vi.mock('@/lib/generated/prisma', () => ({
+  PrismaClient: vi.fn(() => ({})),
+}))
+
 // Mock the db module globally
 vi.mock('./lib/db', () => import('./lib/__mocks__/db'))
 vi.mock('@/lib/db', () => import('./lib/__mocks__/db'))

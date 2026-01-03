@@ -141,7 +141,7 @@ export function ActiveLoansTable({ loans, loading, onRefresh }: ActiveLoansTable
                 <div>
                   <div className="text-sm text-muted-foreground">Celkem splaceno</div>
                   <div className="font-mono-numbers text-xl font-semibold text-[#1B5E20]">
-                    {formatPercent((totalOriginalAmount - totalRemainingBalance) / totalOriginalAmount * 100)}
+                    {formatPercent((totalOriginalAmount - totalRemainingBalance) / totalOriginalAmount)}
                   </div>
                 </div>
               </div>
