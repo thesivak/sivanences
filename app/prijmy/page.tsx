@@ -97,10 +97,17 @@ export default function IncomePage() {
 
   const handleEditStart = (source: IncomeSourceWithAmount) => {
     startEdit(source.id, source.income?.amount)
+    startNameEdit(source.id, source.name)
   }
 
-  const handleNameEditStart = (source: IncomeSourceWithAmount) => {
-    startNameEdit(source.id, source.name)
+  const handleEditCancel = () => {
+    cancelEdit()
+    cancelNameEdit()
+  }
+
+  const handleEditSave = async (id: string) => {
+    await saveNameEdit(id)
+    await saveEdit(id)
   }
 
   const totalIncome = data?.sources.reduce(
@@ -111,7 +118,7 @@ export default function IncomePage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Prijmy"
+        title="Příjmy"
         period={period}
         onPeriodChange={(year, month) => setPeriod({ year, month })}
       />
@@ -125,7 +132,7 @@ export default function IncomePage() {
                 <TrendingUp className="h-6 w-6 text-[#1B5E20]" />
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Celkove prijmy</div>
+                <div className="text-sm text-muted-foreground">Celkové příjmy</div>
                 <div className="font-mono-numbers text-2xl font-semibold text-[#1B5E20]">
                   {formatCurrency(totalIncome, false)}
                 </div>
@@ -139,12 +146,12 @@ export default function IncomePage() {
       <Card className="opacity-0 animate-fade-in stagger-2">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-medium">Prijmy podle zdroje</CardTitle>
+            <CardTitle className="text-base font-medium">Příjmy podle zdroje</CardTitle>
             <AddItemDialog
-              title="Pridat novy zdroj prijmu"
-              buttonLabel="Pridat zdroj"
-              inputLabel="Nazev zdroje"
-              inputPlaceholder="napr. Vedlejsi prijem"
+              title="Přidat nový zdroj příjmu"
+              buttonLabel="Přidat zdroj"
+              inputLabel="Název zdroje"
+              inputPlaceholder="např. Vedlejší příjem"
               onAdd={handleAddSource}
             />
           </div>
@@ -158,7 +165,7 @@ export default function IncomePage() {
                 <TableRow>
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Zdroj</TableHead>
-                  <TableHead className="text-right">Castka</TableHead>
+                  <TableHead className="text-right">Částka</TableHead>
                   <TableHead className="w-24"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -167,25 +174,18 @@ export default function IncomePage() {
                   <TableRow key={source.id}>
                     <TableCell className="text-muted-foreground">{index + 1}</TableCell>
                     <TableCell className="font-medium">
-                      {editingNameId === source.id ? (
+                      {editingId === source.id ? (
                         <Input
                           value={editNameValue}
                           onChange={(e) => setEditNameValue(e.target.value)}
                           className="h-8 w-full max-w-[200px]"
-                          autoFocus
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') saveNameEdit(source.id)
-                            if (e.key === 'Escape') cancelNameEdit()
+                            if (e.key === 'Enter') handleEditSave(source.id)
+                            if (e.key === 'Escape') handleEditCancel()
                           }}
-                          onBlur={() => saveNameEdit(source.id)}
                         />
                       ) : (
-                        <span
-                          className="cursor-pointer hover:text-primary"
-                          onClick={() => handleNameEditStart(source)}
-                        >
-                          {source.name}
-                        </span>
+                        <span>{source.name}</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -196,8 +196,8 @@ export default function IncomePage() {
                           className="h-8 w-32 text-right font-mono-numbers ml-auto"
                           autoFocus
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') saveEdit(source.id)
-                            if (e.key === 'Escape') cancelEdit()
+                            if (e.key === 'Enter') handleEditSave(source.id)
+                            if (e.key === 'Escape') handleEditCancel()
                           }}
                         />
                       ) : (
@@ -220,7 +220,7 @@ export default function IncomePage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => saveEdit(source.id)}
+                            onClick={() => handleEditSave(source.id)}
                           >
                             <Check className="h-4 w-4" />
                           </Button>
@@ -228,7 +228,7 @@ export default function IncomePage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={cancelEdit}
+                            onClick={handleEditCancel}
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -255,14 +255,14 @@ export default function IncomePage() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Smazat zdroj prijmu?</AlertDialogTitle>
+                                <AlertDialogTitle>Smazat zdroj příjmu?</AlertDialogTitle>
                                 <AlertDialogDescription>
                                   Opravdu chcete smazat zdroj &quot;{source.name}&quot;? Tato akce
-                                  smaze i vsechny zaznamy prijmu z tohoto zdroje a nelze ji vzit zpet.
+                                  smaže i všechny záznamy příjmů z tohoto zdroje a nelze ji vzít zpět.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>Zrusit</AlertDialogCancel>
+                                <AlertDialogCancel>Zrušit</AlertDialogCancel>
                                 <AlertDialogAction
                                   onClick={() => handleDeleteSource(source.id)}
                                   className="bg-destructive text-white hover:bg-destructive/90"

@@ -93,10 +93,10 @@ export function EditableTable<T extends EditableItem>({
   onNameEditSave,
   onNameEditValueChange,
   onDelete,
-  deleteConfirmTitle = 'Smazat polozku?',
+  deleteConfirmTitle = 'Smazat položku?',
   deleteConfirmDescription = (item) => `Opravdu chcete smazat "${item.name}"?`,
   showIndex = true,
-  emptyMessage = 'Zadne polozky',
+  emptyMessage = 'Žádné položky',
   valueColorClass,
   formatValue = (v) => formatCurrency(v, false),
 }: EditableTableProps<T>) {
@@ -274,7 +274,7 @@ export function EditableTable<T extends EditableItem>({
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Zrusit</AlertDialogCancel>
+                          <AlertDialogCancel>Zrušit</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => onDelete(item.id)}
                             className="bg-destructive text-white hover:bg-destructive/90"

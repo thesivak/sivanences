@@ -99,8 +99,8 @@ export function evaluateLoan(
   if (monthlyPayment > disposableIncome) {
     return {
       status: 'NOT_RECOMMENDED',
-      label: 'Nedoporuceno',
-      reason: `Mesicni splatka ${Math.round(monthlyPayment).toLocaleString('cs-CZ')} Kc prevysuje disponibilni prijem ${Math.round(disposableIncome).toLocaleString('cs-CZ')} Kc.`,
+      label: 'Nedoporučeno',
+      reason: `Měsíční splátka ${Math.round(monthlyPayment).toLocaleString('cs-CZ')} Kč převyšuje disponibilní příjem ${Math.round(disposableIncome).toLocaleString('cs-CZ')} Kč.`,
       monthlyBudgetImpact: impactPercent,
     }
   }
@@ -108,8 +108,8 @@ export function evaluateLoan(
   if (impactPercent > 40 || remainingPercent < 10) {
     return {
       status: 'RISKY',
-      label: 'Rizikove',
-      reason: `Splatka predstavuje ${impactPercent.toFixed(1)} % prijmu. Po zaplaceni zbyde pouze ${Math.round(remainingAfterLoan).toLocaleString('cs-CZ')} Kc mesicne.`,
+      label: 'Rizikové',
+      reason: `Splátka představuje ${impactPercent.toFixed(1)} % příjmu. Po zaplacení zbyde pouze ${Math.round(remainingAfterLoan).toLocaleString('cs-CZ')} Kč měsíčně.`,
       monthlyBudgetImpact: impactPercent,
     }
   }
@@ -117,16 +117,16 @@ export function evaluateLoan(
   if (impactPercent > 30) {
     return {
       status: 'AVAILABLE',
-      label: 'Dostupne',
-      reason: `Splatka ${impactPercent.toFixed(1)} % prijmu je na horni hranici, ale zvladnutelna. Zbyva ${Math.round(remainingAfterLoan).toLocaleString('cs-CZ')} Kc mesicne.`,
+      label: 'Dostupné',
+      reason: `Splátka ${impactPercent.toFixed(1)} % příjmu je na horní hranici, ale zvládnutelná. Zbývá ${Math.round(remainingAfterLoan).toLocaleString('cs-CZ')} Kč měsíčně.`,
       monthlyBudgetImpact: impactPercent,
     }
   }
 
   return {
     status: 'AVAILABLE',
-    label: 'Dostupne',
-    reason: `Splatka ${impactPercent.toFixed(1)} % prijmu je komfortni. Po zaplaceni zbyva ${Math.round(remainingAfterLoan).toLocaleString('cs-CZ')} Kc mesicne.`,
+    label: 'Dostupné',
+    reason: `Splátka ${impactPercent.toFixed(1)} % příjmu je komfortní. Po zaplacení zbývá ${Math.round(remainingAfterLoan).toLocaleString('cs-CZ')} Kč měsíčně.`,
     monthlyBudgetImpact: impactPercent,
   }
 }
@@ -152,7 +152,7 @@ export function runStressTests(
 
   // Current situation
   results.push({
-    scenario: 'Aktualni situace',
+    scenario: 'Aktuální situace',
     monthlyIncome: baseIncome,
     monthlyExpenses: baseExpenses,
     remainingAfterLoan: baseIncome - baseExpenses - monthlyPayment,
@@ -164,7 +164,7 @@ export function runStressTests(
   for (const drop of incomeDrops) {
     const reducedIncome = baseIncome * (1 - drop)
     results.push({
-      scenario: `Pokles prijmu o ${drop * 100} %`,
+      scenario: `Pokles příjmu o ${drop * 100} %`,
       monthlyIncome: reducedIncome,
       monthlyExpenses: baseExpenses,
       remainingAfterLoan: reducedIncome - baseExpenses - monthlyPayment,
@@ -177,7 +177,7 @@ export function runStressTests(
   for (const rate of inflationRates) {
     const inflatedExpenses = baseExpenses * Math.pow(1 + rate, yearsAhead)
     results.push({
-      scenario: `Inflace ${rate * 100} % rocne (za ${yearsAhead} let)`,
+      scenario: `Inflace ${rate * 100} % ročně (za ${yearsAhead} let)`,
       monthlyIncome: baseIncome,
       monthlyExpenses: inflatedExpenses,
       remainingAfterLoan: baseIncome - inflatedExpenses - monthlyPayment,
@@ -192,14 +192,14 @@ export function runStressTests(
 // Sources: CNB, Swiss Life Hypoindex, Czech banking rates
 export const CZECH_RATES = {
   mortgage: [
-    { label: 'Hypoteka - nizka (4,4 %)', value: 0.044 },
-    { label: 'Hypoteka - prumerna (4,9 %)', value: 0.049 },
-    { label: 'Hypoteka - vyssi (5,5 %)', value: 0.055 },
+    { label: 'Hypotéka - nízká (4,4 %)', value: 0.044 },
+    { label: 'Hypotéka - průměrná (4,9 %)', value: 0.049 },
+    { label: 'Hypotéka - vyšší (5,5 %)', value: 0.055 },
   ],
   consumer: [
-    { label: 'Spotrebitelsky uver - nizky (5,9 %)', value: 0.059 },
-    { label: 'Spotrebitelsky uver - prumerny (8,9 %)', value: 0.089 },
-    { label: 'Spotrebitelsky uver - vyssi (12,9 %)', value: 0.129 },
+    { label: 'Spotřebitelský úvěr - nízký (5,9 %)', value: 0.059 },
+    { label: 'Spotřebitelský úvěr - průměrný (8,9 %)', value: 0.089 },
+    { label: 'Spotřebitelský úvěr - vyšší (12,9 %)', value: 0.129 },
   ],
 }
 

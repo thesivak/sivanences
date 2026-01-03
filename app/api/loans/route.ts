@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
     const scenarioName =
       name ||
-      `${type === 'MORTGAGE' ? 'Hypoteka' : 'Spotrebitelsky uver'} - ${new Date().toLocaleDateString('cs-CZ')}`
+      `${type === 'MORTGAGE' ? 'Hypotéka' : 'Spotřebitelský úvěr'} - ${new Date().toLocaleDateString('cs-CZ')}`
 
     const scenario = await prisma.loanScenario.create({
       data: {

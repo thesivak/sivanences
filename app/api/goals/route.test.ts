@@ -41,8 +41,7 @@ describe('GET /api/goals', () => {
     mockPrisma.expense.groupBy.mockResolvedValue(mockExpenseGroups)
     mockPrisma.savingGoal.findMany.mockResolvedValue(mockGoals)
 
-    const request = new Request('http://localhost/api/goals')
-    const response = await GET(request)
+    const response = await GET()
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -67,8 +66,7 @@ describe('GET /api/goals', () => {
       },
     ])
 
-    const request = new Request('http://localhost/api/goals')
-    const response = await GET(request)
+    const response = await GET()
     const data = await response.json()
 
     expect(data.goals[0].progress).toBe(0)
@@ -78,8 +76,7 @@ describe('GET /api/goals', () => {
     mockPrisma.expense.groupBy.mockResolvedValue([])
     mockPrisma.savingGoal.findMany.mockResolvedValue([])
 
-    const request = new Request('http://localhost/api/goals')
-    const response = await GET(request)
+    const response = await GET()
     const data = await response.json()
 
     expect(data.avgMonthlyExpenses).toBe(0)
@@ -103,8 +100,7 @@ describe('GET /api/goals', () => {
       },
     ])
 
-    const request = new Request('http://localhost/api/goals')
-    await GET(request)
+    await GET()
 
     expect(mockPrisma.savingGoal.findMany).toHaveBeenCalledWith({
       orderBy: { order: 'asc' },
@@ -120,8 +116,7 @@ describe('GET /api/goals', () => {
   it('returns 500 error when database query fails', async () => {
     mockPrisma.expense.groupBy.mockRejectedValue(new Error('DB error'))
 
-    const request = new Request('http://localhost/api/goals')
-    const response = await GET(request)
+    const response = await GET()
     const data = await response.json()
 
     expect(response.status).toBe(500)
@@ -241,7 +236,7 @@ describe('POST /api/goals', () => {
     const request = new Request('http://localhost/api/goals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Bez cile' }),
+      body: JSON.stringify({ name: 'Bez cíle' }),
     })
 
     await POST(request)

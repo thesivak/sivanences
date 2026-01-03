@@ -37,7 +37,7 @@ export async function GET(request: Request) {
     if (format === 'csv') {
       // Generate CSV for expenses
       const expensesCsv = [
-        'Rok;Mesic;Kategorie;Castka',
+        'Rok;Měsíc;Kategorie;Částka',
         ...expenses.map(
           (e) => `${e.year};${e.month};${e.category.name};${e.amount.toFixed(2).replace('.', ',')}`
         ),
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
 
       // Generate CSV for income
       const incomeCsv = [
-        'Rok;Mesic;Zdroj;Castka',
+        'Rok;Měsíc;Zdroj;Částka',
         ...incomes.map(
           (i) => `${i.year};${i.month};${i.source.name};${i.amount.toFixed(2).replace('.', ',')}`
         ),
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
 
       // Generate CSV for investments
       const investmentsCsv = [
-        'Rok;Mesic;Typ;Castka',
+        'Rok;Měsíc;Typ;Částka',
         ...investments.map(
           (i) => `${i.year};${i.month};${i.type.name};${i.amount.toFixed(2).replace('.', ',')}`
         ),
@@ -61,17 +61,17 @@ export async function GET(request: Request) {
 
       // Combine into a multi-section CSV
       const fullCsv = [
-        '# VYDAJE',
+        '# VÝDAJE',
         expensesCsv,
         '',
-        '# PRIJMY',
+        '# PŘÍJMY',
         incomeCsv,
         '',
         '# INVESTICE',
         investmentsCsv,
         '',
-        '# SPORICI CILE',
-        'Nazev;Cilova castka;Aktualni castka;Nouzovy fond',
+        '# SPOŘICÍ CÍLE',
+        'Název;Cílová částka;Aktuální částka;Nouzový fond',
         ...goals.map(
           (g) =>
             `${g.name};${g.targetAmount?.toFixed(2).replace('.', ',') || ''};${g.currentAmount.toFixed(2).replace('.', ',')};${g.isEmergency ? 'Ano' : 'Ne'}`

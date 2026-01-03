@@ -97,10 +97,17 @@ export default function ExpensesPage() {
 
   const handleEditStart = (cat: CategoryWithExpense) => {
     startEdit(cat.id, cat.expense?.amount)
+    startNameEdit(cat.id, cat.name)
   }
 
-  const handleNameEditStart = (cat: CategoryWithExpense) => {
-    startNameEdit(cat.id, cat.name)
+  const handleEditCancel = () => {
+    cancelEdit()
+    cancelNameEdit()
+  }
+
+  const handleEditSave = async (id: string) => {
+    await saveNameEdit(id)
+    await saveEdit(id)
   }
 
   const totalExpenses = data?.categories.reduce(
@@ -111,7 +118,7 @@ export default function ExpensesPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Vydaje"
+        title="Výdaje"
         period={period}
         onPeriodChange={(year, month) => setPeriod({ year, month })}
       />
@@ -119,16 +126,16 @@ export default function ExpensesPage() {
       <Card className="opacity-0 animate-fade-in stagger-2">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-medium">Vydaje podle kategorii</CardTitle>
+            <CardTitle className="text-base font-medium">Výdaje podle kategorií</CardTitle>
             <div className="flex items-center gap-4">
               <div className="font-mono-numbers text-lg font-semibold">
                 Celkem: {formatCurrency(totalExpenses, false)}
               </div>
               <AddItemDialog
-                title="Pridat novou kategorii"
-                buttonLabel="Pridat kategorii"
-                inputLabel="Nazev kategorie"
-                inputPlaceholder="napr. Dovolena"
+                title="Přidat novou kategorii"
+                buttonLabel="Přidat kategorii"
+                inputLabel="Název kategorie"
+                inputPlaceholder="např. Dovolená"
                 onAdd={handleAddCategory}
               />
             </div>
@@ -143,7 +150,7 @@ export default function ExpensesPage() {
                 <TableRow>
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Kategorie</TableHead>
-                  <TableHead className="text-right">Castka</TableHead>
+                  <TableHead className="text-right">Částka</TableHead>
                   <TableHead className="w-24"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -152,25 +159,18 @@ export default function ExpensesPage() {
                   <TableRow key={cat.id}>
                     <TableCell className="text-muted-foreground">{index + 1}</TableCell>
                     <TableCell className="font-medium">
-                      {editingNameId === cat.id ? (
+                      {editingId === cat.id ? (
                         <Input
                           value={editNameValue}
                           onChange={(e) => setEditNameValue(e.target.value)}
                           className="h-8 w-full max-w-[200px]"
-                          autoFocus
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') saveNameEdit(cat.id)
-                            if (e.key === 'Escape') cancelNameEdit()
+                            if (e.key === 'Enter') handleEditSave(cat.id)
+                            if (e.key === 'Escape') handleEditCancel()
                           }}
-                          onBlur={() => saveNameEdit(cat.id)}
                         />
                       ) : (
-                        <span
-                          className="cursor-pointer hover:text-primary"
-                          onClick={() => handleNameEditStart(cat)}
-                        >
-                          {cat.name}
-                        </span>
+                        <span>{cat.name}</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -181,8 +181,8 @@ export default function ExpensesPage() {
                           className="h-8 w-32 text-right font-mono-numbers ml-auto"
                           autoFocus
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') saveEdit(cat.id)
-                            if (e.key === 'Escape') cancelEdit()
+                            if (e.key === 'Enter') handleEditSave(cat.id)
+                            if (e.key === 'Escape') handleEditCancel()
                           }}
                         />
                       ) : (
@@ -205,7 +205,7 @@ export default function ExpensesPage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => saveEdit(cat.id)}
+                            onClick={() => handleEditSave(cat.id)}
                           >
                             <Check className="h-4 w-4" />
                           </Button>
@@ -213,7 +213,7 @@ export default function ExpensesPage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={cancelEdit}
+                            onClick={handleEditCancel}
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -243,11 +243,11 @@ export default function ExpensesPage() {
                                 <AlertDialogTitle>Smazat kategorii?</AlertDialogTitle>
                                 <AlertDialogDescription>
                                   Opravdu chcete smazat kategorii &quot;{cat.name}&quot;? Tato akce
-                                  smaze i vsechny zaznamy vydaju v teto kategorii a nelze ji vzit zpet.
+                                  smaže i všechny záznamy výdajů v této kategorii a nelze ji vzít zpět.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>Zrusit</AlertDialogCancel>
+                                <AlertDialogCancel>Zrušit</AlertDialogCancel>
                                 <AlertDialogAction
                                   onClick={() => handleDeleteCategory(cat.id)}
                                   className="bg-destructive text-white hover:bg-destructive/90"

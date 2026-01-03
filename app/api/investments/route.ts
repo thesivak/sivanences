@@ -4,6 +4,7 @@ import {
   successResponse,
   errorResponse,
   badRequestResponse,
+  invalidateInsightsCache,
 } from '@/lib/api'
 
 export async function GET(request: Request) {
@@ -55,6 +56,9 @@ export async function POST(request: Request) {
       update: { amount },
       create: { typeId, year, month, amount },
     })
+
+    // Invalidate AI insights cache when investments change
+    await invalidateInsightsCache()
 
     return successResponse(investment)
   } catch (error) {

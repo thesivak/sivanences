@@ -5,23 +5,46 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding database...')
 
+  // Clear existing expenses and categories first
+  await prisma.expense.deleteMany({})
+  await prisma.category.deleteMany({})
+  console.log('Cleared existing expenses and categories')
+
   // Create expense categories
   const categories = [
-    { name: 'Potraviny', icon: 'shopping-cart', order: 1 },
-    { name: 'Bydleni', icon: 'home', order: 2 },
-    { name: 'Energie', icon: 'zap', order: 3 },
-    { name: 'Doprava', icon: 'car', order: 4 },
-    { name: 'Obleceni', icon: 'shirt', order: 5 },
-    { name: 'Zdravi', icon: 'heart', order: 6 },
-    { name: 'Vzdelavani', icon: 'book', order: 7 },
-    { name: 'Zabava', icon: 'gamepad', order: 8 },
-    { name: 'Restaurace', icon: 'utensils', order: 9 },
-    { name: 'Komunikace', icon: 'phone', order: 10 },
-    { name: 'Pojisteni', icon: 'shield', order: 11 },
-    { name: 'Deti', icon: 'baby', order: 12 },
-    { name: 'Domacnost', icon: 'lamp', order: 13 },
-    { name: 'Osobni', icon: 'user', order: 14 },
-    { name: 'Ostatni', icon: 'more-horizontal', order: 15 },
+    { name: 'Potraviny + domacnost', icon: 'shopping-cart', order: 1 },
+    { name: 'Mamka splatka', icon: 'heart', order: 2 },
+    { name: 'Pipalovi', icon: 'users', order: 3 },
+    { name: 'Joshuar', icon: 'user', order: 4 },
+    { name: 'Imran', icon: 'user', order: 5 },
+    { name: 'Posilovna', icon: 'dumbbell', order: 6 },
+    { name: 'Apple', icon: 'smartphone', order: 7 },
+    { name: 'Cez elektrina', icon: 'zap', order: 8 },
+    { name: 'Voda', icon: 'droplet', order: 9 },
+    { name: 'Sara skola', icon: 'graduation-cap', order: 10 },
+    { name: 'Miriam obedy', icon: 'utensils', order: 11 },
+    { name: 'Vodafone', icon: 'phone', order: 12 },
+    { name: 'Vodafone - Matthew', icon: 'phone', order: 13 },
+    { name: '1Password', icon: 'lock', order: 14 },
+    { name: 'YouTube Premium', icon: 'play', order: 15 },
+    { name: 'Depilace', icon: 'sparkles', order: 16 },
+    { name: 'Filtry', icon: 'filter', order: 17 },
+    { name: 'Alza iPhone - Matthew', icon: 'smartphone', order: 18 },
+    { name: 'Adobe - Matthew', icon: 'palette', order: 19 },
+    { name: 'AI tools', icon: 'bot', order: 20 },
+    { name: 'Digital Ocean', icon: 'cloud', order: 21 },
+    { name: 'Alza Dell monitor', icon: 'monitor', order: 22 },
+    { name: 'Alza iPad - Matthew', icon: 'tablet', order: 23 },
+    { name: 'Alza Apple Studio display', icon: 'monitor', order: 24 },
+    { name: 'Alza Macbook', icon: 'laptop', order: 25 },
+    { name: 'Alza Macbook - Matthew', icon: 'laptop', order: 26 },
+    { name: 'CSSZ zaloha', icon: 'building', order: 27 },
+    { name: 'CPZP zaloha', icon: 'shield', order: 28 },
+    { name: 'CPZP splatky', icon: 'shield', order: 29 },
+    { name: 'CSSZ splatky', icon: 'building', order: 30 },
+    { name: 'iDoklad', icon: 'file-text', order: 31 },
+    { name: 'Laravel Forge', icon: 'server', order: 32 },
+    { name: 'Resend', icon: 'mail', order: 33 },
   ]
 
   for (const cat of categories) {
@@ -65,52 +88,57 @@ async function main() {
   const currentYear = now.getFullYear()
   const currentMonth = now.getMonth() + 1
 
-  // Sample monthly expenses (realistic Czech family budget)
+  // Monthly expenses
   const sampleExpenses: Record<string, number> = {
-    Potraviny: 15000,
-    Bydleni: 18000,
-    Energie: 5500,
-    Doprava: 4000,
-    Obleceni: 2000,
-    Zdravi: 1500,
-    Vzdelavani: 3000,
-    Zabava: 2500,
-    Restaurace: 3000,
-    Komunikace: 1200,
-    Pojisteni: 2500,
-    Deti: 4000,
-    Domacnost: 1500,
-    Osobni: 1000,
-    Ostatni: 2000,
+    'Potraviny + domacnost': 48000,
+    'Mamka splatka': 10000,
+    'Pipalovi': 500,
+    'Joshuar': 1000,
+    'Imran': 10050,
+    'Posilovna': 1500,
+    'Apple': 1217,
+    'Cez elektrina': 3000,
+    'Voda': 3000,
+    'Sara skola': 4000,
+    'Miriam obedy': 1000,
+    'Vodafone': 2500,
+    'Vodafone - Matthew': 800,
+    '1Password': 180,
+    'YouTube Premium': 179,
+    'Depilace': 500,
+    'Filtry': 2660,
+    'Alza iPhone - Matthew': 832,
+    'Adobe - Matthew': 450,
+    'AI tools': 6000,
+    'Digital Ocean': 900,
+    'Alza Dell monitor': 1103,
+    'Alza iPad - Matthew': 617,
+    'Alza Apple Studio display': 957,
+    'Alza Macbook': 2800,
+    'Alza Macbook - Matthew': 1608,
+    'CSSZ zaloha': 13561,
+    'CPZP zaloha': 5700,
+    'CPZP splatky': 1500,
+    'CSSZ splatky': 1313,
+    'iDoklad': 480,
+    'Laravel Forge': 400,
+    'Resend': 500,
   }
 
-  // Create expenses for last 6 months with some variation
-  for (let i = 0; i < 6; i++) {
-    let month = currentMonth - i
-    let year = currentYear
-    if (month <= 0) {
-      month += 12
-      year -= 1
-    }
+  // Create expenses for current month with exact amounts
+  for (const [catName, amount] of Object.entries(sampleExpenses)) {
+    const categoryId = getCategoryId(catName)
+    if (!categoryId) continue
 
-    for (const [catName, baseAmount] of Object.entries(sampleExpenses)) {
-      const categoryId = getCategoryId(catName)
-      if (!categoryId) continue
-
-      // Add some random variation (-15% to +15%)
-      const variation = 1 + (Math.random() * 0.3 - 0.15)
-      const amount = Math.round(baseAmount * variation)
-
-      await prisma.expense.upsert({
-        where: {
-          categoryId_year_month: { categoryId, year, month },
-        },
-        update: { amount },
-        create: { categoryId, year, month, amount },
-      })
-    }
+    await prisma.expense.upsert({
+      where: {
+        categoryId_year_month: { categoryId, year: currentYear, month: currentMonth },
+      },
+      update: { amount },
+      create: { categoryId, year: currentYear, month: currentMonth, amount },
+    })
   }
-  console.log('Created sample expenses')
+  console.log('Created expenses')
 
   // Create income data for current month
   const incomeData = [
@@ -244,24 +272,51 @@ async function main() {
   })
   console.log('Created fund transactions')
 
-  // Active loans (currently none)
-  // Uncomment and modify if you want to seed loans:
-  // await prisma.activeLoan.upsert({
-  //   where: { id: 'hypoteka' },
-  //   update: {},
-  //   create: {
-  //     id: 'hypoteka',
-  //     name: 'Hypoteka',
-  //     type: 'MORTGAGE',
-  //     originalAmount: 3000000,
-  //     remainingAmount: 2500000,
-  //     interestRate: 5.5,
-  //     monthlyPayment: 18000,
-  //     startDate: new Date('2023-01-01'),
-  //     termMonths: 360,
-  //   },
-  // })
-  console.log('No active loans to seed')
+  // Clear active loans and create new ones
+  await prisma.activeLoan.deleteMany({})
+
+  // Car leasing - Leasing ČS
+  await prisma.activeLoan.create({
+    data: {
+      name: 'Leasing auta',
+      type: 'CONSUMER',
+      originalAmount: 1731824.8,
+      remainingAmount: 1674034.22,
+      interestRate: 5.59,
+      monthlyPayment: 22415,
+      startDate: new Date('2025-08-06'),
+      termMonths: 96, // 8 years to Aug 2033
+    },
+  })
+
+  // House renovations loan - Buřinka
+  await prisma.activeLoan.create({
+    data: {
+      name: 'Rekonstrukce domu',
+      type: 'CONSUMER',
+      originalAmount: 2500000,
+      remainingAmount: 2490066.2,
+      interestRate: 4.99,
+      monthlyPayment: 16609,
+      startDate: new Date('2025-07-15'),
+      termMonths: 240, // 20 years to July 2045
+    },
+  })
+
+  console.log('Created active loans')
+
+  // Household settings
+  await prisma.householdSettings.upsert({
+    where: { id: 'default' },
+    update: {},
+    create: {
+      id: 'default',
+      totalMembers: 4,
+      dependentChildren: 2,
+      adults: 2,
+    },
+  })
+  console.log('Created household settings')
 
   console.log('Database seeded successfully!')
 }

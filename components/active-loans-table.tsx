@@ -88,7 +88,7 @@ export function ActiveLoansTable({ loans, loading, onRefresh }: ActiveLoansTable
   }
 
   const getTypeLabel = (type: string) => {
-    return type === 'MORTGAGE' ? 'Hypoteka' : 'Uver'
+    return type === 'MORTGAGE' ? 'Hypotéka' : 'Úvěr'
   }
 
   return (
@@ -97,11 +97,11 @@ export function ActiveLoansTable({ loans, loading, onRefresh }: ActiveLoansTable
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base font-medium">
             <Wallet className="h-4 w-4 text-muted-foreground" />
-            Aktivni pujcky
+            Aktivní půjčky
           </CardTitle>
           <Button onClick={() => { setEditLoan(null); setAddDialogOpen(true) }}>
             <Plus className="mr-2 h-4 w-4" />
-            Pridat pujcku
+            Přidat půjčku
           </Button>
         </CardHeader>
         <CardContent>
@@ -114,12 +114,12 @@ export function ActiveLoansTable({ loans, loading, onRefresh }: ActiveLoansTable
           ) : loans.length === 0 ? (
             <div className="py-12 text-center">
               <Wallet className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <p className="mt-4 text-muted-foreground">Zatim nemáte žádné aktivní pujcky</p>
+              <p className="mt-4 text-muted-foreground">Zatím nemáte žádné aktivní půjčky</p>
               <Button
                 className="mt-4"
                 onClick={() => { setEditLoan(null); setAddDialogOpen(true) }}
               >
-                Pridat prvni pujcku
+                Přidat první půjčku
               </Button>
             </div>
           ) : (
@@ -127,13 +127,13 @@ export function ActiveLoansTable({ loans, loading, onRefresh }: ActiveLoansTable
               {/* Summary Row */}
               <div className="mb-6 grid grid-cols-3 gap-4 rounded-lg bg-muted/50 p-4">
                 <div>
-                  <div className="text-sm text-muted-foreground">Celkove mesicni splatky</div>
+                  <div className="text-sm text-muted-foreground">Celkové měsíční splátky</div>
                   <div className="font-mono-numbers text-xl font-semibold">
                     {formatCurrency(totalMonthlyPayment, false)}
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">Zbyva splatit</div>
+                  <div className="text-sm text-muted-foreground">Zbývá splatit</div>
                   <div className="font-mono-numbers text-xl font-semibold">
                     {formatCurrency(totalRemainingBalance, false)}
                   </div>
@@ -150,13 +150,13 @@ export function ActiveLoansTable({ loans, loading, onRefresh }: ActiveLoansTable
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nazev</TableHead>
+                    <TableHead>Název</TableHead>
                     <TableHead>Typ</TableHead>
-                    <TableHead className="text-right">Zustatek</TableHead>
-                    <TableHead className="text-right">Splatka</TableHead>
-                    <TableHead className="text-right">Urok</TableHead>
-                    <TableHead>Prubeh</TableHead>
-                    <TableHead className="text-right">Zbyvá</TableHead>
+                    <TableHead className="text-right">Zůstatek</TableHead>
+                    <TableHead className="text-right">Splátka</TableHead>
+                    <TableHead className="text-right">Úrok</TableHead>
+                    <TableHead>Průběh</TableHead>
+                    <TableHead className="text-right">Zbývá</TableHead>
                     <TableHead className="w-20"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -194,7 +194,7 @@ export function ActiveLoansTable({ loans, loading, onRefresh }: ActiveLoansTable
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="text-sm">
-                          {loan.monthsRemaining} mesicu
+                          {loan.monthsRemaining} měsíců
                         </div>
                         <div className="text-xs text-muted-foreground">
                           ({Math.floor(loan.monthsRemaining / 12)} let)
@@ -241,20 +241,20 @@ export function ActiveLoansTable({ loans, loading, onRefresh }: ActiveLoansTable
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Smazat pujcku</DialogTitle>
+            <DialogTitle>Smazat půjčku</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <p className="text-muted-foreground">
-              Opravdu chcete smazat pujcku{' '}
+              Opravdu chcete smazat půjčku{' '}
               <span className="font-medium text-foreground">{loanToDelete?.name}</span>?
-              Tato akce je nevratna.
+              Tato akce je nevratná.
             </p>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-                Zrusit
+                Zrušit
               </Button>
               <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-                {deleting ? 'Mazani...' : 'Smazat'}
+                {deleting ? 'Mažu...' : 'Smazat'}
               </Button>
             </div>
           </div>

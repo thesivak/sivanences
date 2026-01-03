@@ -41,6 +41,11 @@ export const mockPrisma = {
   loanScenario: createModelMock(),
   activeLoan: createModelMock(),
 
+  // AI & Settings
+  householdSettings: createModelMock(),
+  aIInsightsCache: createModelMock(),
+  aIFeedback: createModelMock(),
+
   // Transaction support
   $transaction: vi.fn((callback) => callback(mockPrisma)),
   $connect: vi.fn(),

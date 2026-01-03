@@ -224,7 +224,7 @@ export default function InvestmentsPage() {
                 <TrendingUp className="h-6 w-6 text-[#37474F]" />
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Mesicni investice</div>
+                <div className="text-sm text-muted-foreground">Měsíční investice</div>
                 <div className="font-mono-numbers text-2xl font-semibold text-[#37474F]">
                   {formatCurrency(totalMonthlyInvestments, false)}
                 </div>
@@ -239,7 +239,7 @@ export default function InvestmentsPage() {
                 <Calculator className="h-6 w-6 text-[#1B5E20]" />
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Celkem investovano</div>
+                <div className="text-sm text-muted-foreground">Celkem investováno</div>
                 <div className="font-mono-numbers text-2xl font-semibold text-[#1B5E20]">
                   {formatCurrency(totalInvested, false)}
                 </div>
@@ -255,10 +255,10 @@ export default function InvestmentsPage() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-base font-medium">Investice podle typu</CardTitle>
             <AddItemDialog
-              title="Pridat novy typ investice"
-              buttonLabel="Pridat typ"
-              inputLabel="Nazev typu"
-              inputPlaceholder="napr. ETF, Akcie"
+              title="Přidat nový typ investice"
+              buttonLabel="Přidat typ"
+              inputLabel="Název typu"
+              inputPlaceholder="např. ETF, Akcie"
               onAdd={handleAddType}
             />
           </div>
@@ -272,9 +272,9 @@ export default function InvestmentsPage() {
                 <TableRow>
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Typ</TableHead>
-                  <TableHead className="text-right">Mesicni</TableHead>
+                  <TableHead className="text-right">Měsíční</TableHead>
                   <TableHead className="text-right">Celkem</TableHead>
-                  <TableHead className="text-right">Vynos</TableHead>
+                  <TableHead className="text-right">Výnos</TableHead>
                   <TableHead className="text-right">Roky</TableHead>
                   <TableHead className="w-28"></TableHead>
                 </TableRow>
@@ -419,11 +419,11 @@ export default function InvestmentsPage() {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Smazat typ investice?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Opravdu chcete smazat typ &quot;{type.name}&quot;? Tato akce smaze i vsechny zaznamy investic tohoto typu.
+                                  Opravdu chcete smazat typ &quot;{type.name}&quot;? Tato akce smaže i všechny záznamy investic tohoto typu.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>Zrusit</AlertDialogCancel>
+                                <AlertDialogCancel>Zrušit</AlertDialogCancel>
                                 <AlertDialogAction onClick={() => handleDeleteType(type.id)} className="bg-destructive text-white hover:bg-destructive/90">
                                   Smazat
                                 </AlertDialogAction>
@@ -447,7 +447,7 @@ export default function InvestmentsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-medium">
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              Projekce rustu investic
+              Projekce růstu investic
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -501,15 +501,15 @@ export default function InvestmentsPage() {
                     <div className="font-medium">{type.name}</div>
                     <div className="mt-2 space-y-1 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Konecna hodnota:</span>
+                        <span className="text-muted-foreground">Konečná hodnota:</span>
                         <span className="font-mono-numbers font-semibold text-[#1B5E20]">{formatCurrency(finalValue, false)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Celkovy vklad:</span>
+                        <span className="text-muted-foreground">Celkový vklad:</span>
                         <span className="font-mono-numbers">{formatCurrency(totalContributions, false)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Zisk z uroku:</span>
+                        <span className="text-muted-foreground">Zisk z úroků:</span>
                         <span className="font-mono-numbers text-[#1B5E20]">+{formatCurrency(totalGain, false)}</span>
                       </div>
                     </div>
@@ -527,10 +527,10 @@ export default function InvestmentsPage() {
           <CardContent className="py-12 text-center">
             <TrendingUp className="mx-auto h-12 w-12 text-muted-foreground/50" />
             <p className="mt-4 text-muted-foreground">
-              Pro zobrazeni projekci rustu nastavte u investic celkovou castku, ocekavany vynos a horizont.
+              Pro zobrazení projekcí růstu nastavte u investic celkovou částku, očekávaný výnos a horizont.
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Kliknete na ikonu <Pencil className="inline h-4 w-4" /> pro upravu investice.
+              Klikněte na ikonu <Pencil className="inline h-4 w-4" /> pro úpravu investice.
             </p>
           </CardContent>
         </Card>

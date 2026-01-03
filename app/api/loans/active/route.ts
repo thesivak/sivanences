@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { calculateLoan } from '@/lib/loan'
+import { invalidateInsightsCache } from '@/lib/api'
 
 // Calculate remaining balance based on payments made since start date
 function calculateCurrentBalance(
@@ -102,6 +103,9 @@ export async function POST(request: Request) {
       },
     })
 
+    // Invalidate AI insights cache when loans change
+    await invalidateInsightsCache()
+
     return NextResponse.json(loan)
   } catch (error) {
     console.error('Error creating active loan:', error)
@@ -128,6 +132,9 @@ export async function PATCH(request: Request) {
       data: updateData,
     })
 
+    // Invalidate AI insights cache when loans change
+    await invalidateInsightsCache()
+
     return NextResponse.json(loan)
   } catch (error) {
     console.error('Error updating active loan:', error)
@@ -147,6 +154,9 @@ export async function DELETE(request: Request) {
     await prisma.activeLoan.delete({
       where: { id },
     })
+
+    // Invalidate AI insights cache when loans change
+    await invalidateInsightsCache()
 
     return NextResponse.json({ success: true })
   } catch (error) {

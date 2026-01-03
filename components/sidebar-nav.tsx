@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS } from '@/lib/types'
+import { useSidebar } from '@/lib/sidebar-context'
 import {
   LayoutDashboard,
   Receipt,
@@ -12,6 +13,8 @@ import {
   Target,
   Calculator,
   Download,
+  ChevronLeft,
+  ChevronRight,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -28,18 +31,29 @@ const iconMap: Record<string, LucideIcon> = {
 
 export function SidebarNav() {
   const pathname = usePathname()
+  const { expanded, isLoading, toggle } = useSidebar()
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-56 border-r border-border bg-sidebar">
-      <div className="flex h-full flex-col">
+    <aside
+      className={cn(
+        'fixed left-0 top-0 z-40 h-screen border-r border-border bg-sidebar transition-all duration-200 overflow-hidden',
+        expanded ? 'w-44' : 'w-14'
+      )}
+    >
+      <div className="flex h-full flex-col w-44">
         {/* Logo / Brand */}
-        <div className="flex h-16 items-center border-b border-border px-6">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground">
+        <div className="flex h-14 items-center border-b border-border px-3">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-primary text-primary-foreground">
               <span className="font-display text-lg font-semibold">R</span>
             </div>
-            <span className="font-display text-xl font-semibold tracking-tight">
-              Rozpocet
+            <span
+              className={cn(
+                'font-display text-lg font-semibold tracking-tight whitespace-nowrap transition-opacity duration-200',
+                expanded ? 'opacity-100' : 'opacity-0'
+              )}
+            >
+              Rozpočet
             </span>
           </Link>
         </div>
@@ -55,7 +69,7 @@ export function SidebarNav() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'group flex items-center gap-3 rounded px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                  'group flex items-center gap-2 rounded px-2 py-2 text-sm font-medium transition-all duration-200',
                   'opacity-0 animate-slide-in',
                   isActive
                     ? 'bg-primary text-primary-foreground'
@@ -63,24 +77,46 @@ export function SidebarNav() {
                 )}
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
-                <Icon
+                <Icon className="h-4 w-4 shrink-0" />
+                <span
                   className={cn(
-                    'h-4 w-4 transition-transform duration-200',
-                    !isActive && 'group-hover:scale-110'
+                    'whitespace-nowrap transition-opacity duration-200',
+                    expanded ? 'opacity-100' : 'opacity-0'
                   )}
-                />
-                {item.label}
+                >
+                  {item.label}
+                </span>
               </Link>
             )
           })}
         </nav>
 
-        {/* Footer */}
-        <div className="border-t border-border p-4">
-          <div className="text-xs text-muted-foreground">
-            <div className="font-medium text-foreground">Rodinny rozpocet</div>
-            <div className="mt-1">v1.0.0</div>
-          </div>
+        {/* Toggle button and footer */}
+        <div className="border-t border-border p-2">
+          <button
+            onClick={toggle}
+            disabled={isLoading}
+            className={cn(
+              'flex items-center rounded p-2 text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors',
+              expanded ? 'w-full justify-center' : 'w-8 justify-center'
+            )}
+            aria-label={expanded ? 'Sbalit menu' : 'Rozbalit menu'}
+          >
+            {expanded ? (
+              <>
+                <ChevronLeft className="h-4 w-4 shrink-0" />
+                <span className="ml-2 text-sm">Sbalit</span>
+              </>
+            ) : (
+              <ChevronRight className="h-4 w-4 shrink-0" />
+            )}
+          </button>
+          {expanded && (
+            <div className="mt-2 text-xs text-muted-foreground">
+              <div className="font-medium text-foreground">Rodinný rozpočet</div>
+              <div className="mt-0.5">v1.0.0</div>
+            </div>
+          )}
         </div>
       </div>
     </aside>

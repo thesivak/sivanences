@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -12,9 +12,15 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import type { SavedLoanScenario } from '@/lib/loan'
+import { evaluateLoan, type SavedLoanScenario, type LoanVerdict } from '@/lib/loan'
 import {
   History,
   Eye,
@@ -26,20 +32,34 @@ import {
   XCircle,
   Check,
   X,
+  RefreshCw,
 } from 'lucide-react'
+
+interface CurrentBudget {
+  totalIncome: number
+  totalExpenses: number
+}
 
 interface LoanHistorySidebarProps {
   scenarios: SavedLoanScenario[]
   selectedIds: string[]
+  currentBudget?: CurrentBudget | null
   onView: (scenario: SavedLoanScenario) => void
   onDelete: (id: string) => void
   onToggleCompare: (id: string) => void
   onEdit: (id: string, newName: string) => void
 }
 
+interface RecalculatedVerdict {
+  current: LoanVerdict
+  hasChanged: boolean
+  originalStatus?: string | null
+}
+
 export function LoanHistorySidebar({
   scenarios,
   selectedIds,
+  currentBudget,
   onView,
   onDelete,
   onToggleCompare,
@@ -48,6 +68,29 @@ export function LoanHistorySidebar({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+
+  // Recalculate verdicts based on current budget
+  const recalculatedVerdicts = useMemo(() => {
+    if (!currentBudget || currentBudget.totalIncome <= 0) return {}
+
+    const verdicts: Record<string, RecalculatedVerdict> = {}
+
+    for (const scenario of scenarios) {
+      const currentVerdict = evaluateLoan(
+        scenario.monthlyPayment,
+        currentBudget.totalIncome,
+        currentBudget.totalExpenses
+      )
+
+      verdicts[scenario.id] = {
+        current: currentVerdict,
+        hasChanged: scenario.verdictStatus !== currentVerdict.status,
+        originalStatus: scenario.verdictStatus,
+      }
+    }
+
+    return verdicts
+  }, [scenarios, currentBudget])
 
   const getVerdictIcon = (status?: string | null) => {
     switch (status) {
@@ -91,14 +134,22 @@ export function LoanHistorySidebar({
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base font-medium">
             <History className="h-4 w-4 text-muted-foreground" />
-            Historie analyz
+            Uložené scénáře
           </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Vaše předchozí simulace k porovnání
+          </p>
         </CardHeader>
         <CardContent className="space-y-3 max-h-[70vh] overflow-y-auto">
           {scenarios.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Zatim zadne ulozene analyzy
-            </p>
+            <div className="text-center py-6">
+              <div className="text-sm text-muted-foreground">
+                Zatím žádné uložené scénáře
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Po výpočtu se simulace automaticky uloží
+              </p>
+            </div>
           ) : (
             scenarios.map((scenario) => (
               <div
@@ -145,7 +196,39 @@ export function LoanHistorySidebar({
                     ) : (
                       <>
                         <div className="flex items-center gap-1.5">
-                          {getVerdictIcon(scenario.verdictStatus)}
+                          {(() => {
+                            const recalc = recalculatedVerdicts[scenario.id]
+                            if (recalc) {
+                              return (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="flex items-center gap-1">
+                                        {getVerdictIcon(recalc.current.status)}
+                                        {recalc.hasChanged && (
+                                          <RefreshCw className="h-2.5 w-2.5 text-blue-500" />
+                                        )}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left" className="max-w-[250px]">
+                                      <div className="space-y-1">
+                                        <p className="font-medium text-xs">
+                                          {recalc.hasChanged ? 'Přepočteno dle aktuálního rozpočtu' : 'Aktuální hodnocení'}
+                                        </p>
+                                        <p className="text-xs">{recalc.current.reason}</p>
+                                        {recalc.hasChanged && recalc.originalStatus && (
+                                          <p className="text-xs text-muted-foreground pt-1 border-t">
+                                            Původně: {recalc.originalStatus === 'AVAILABLE' ? 'Dostupné' : recalc.originalStatus === 'RISKY' ? 'Rizikové' : 'Nedoporučeno'}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )
+                            }
+                            return getVerdictIcon(scenario.verdictStatus)
+                          })()}
                           <span className="font-medium text-sm truncate">
                             {scenario.name}
                           </span>
@@ -157,20 +240,20 @@ export function LoanHistorySidebar({
                     )}
                   </div>
                   <Badge variant="outline" className="text-xs shrink-0">
-                    {scenario.type === 'MORTGAGE' ? 'Hypo' : 'Uver'}
+                    {scenario.type === 'MORTGAGE' ? 'Hypo' : 'Úvěr'}
                   </Badge>
                 </div>
 
                 {/* Key Numbers */}
                 <div className="mt-2 space-y-1 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Castka:</span>
+                    <span className="text-muted-foreground">Částka:</span>
                     <span className="font-mono-numbers">
                       {formatCurrency(scenario.amount, false)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Splatka:</span>
+                    <span className="text-muted-foreground">Splátka:</span>
                     <span className="font-mono-numbers">
                       {formatCurrency(scenario.monthlyPayment, false)}
                     </span>
@@ -226,14 +309,14 @@ export function LoanHistorySidebar({
       <Dialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>Smazat analyzu?</DialogTitle>
+            <DialogTitle>Smazat scénář?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Opravdu chcete smazat tuto analyzu? Tato akce je nevratna.
+            Opravdu chcete smazat tento scénář? Tato akce je nevratná.
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
-              Zrusit
+              Zrušit
             </Button>
             <Button
               variant="destructive"

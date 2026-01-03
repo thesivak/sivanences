@@ -59,17 +59,17 @@ export function LoanCompareView({ scenarios, onClose }: LoanCompareViewProps) {
     isRate?: boolean
     isMonths?: boolean
   }[] = [
-    { label: 'Vyse pujcky', key: 'amount', lowerIsBetter: true },
-    { label: 'Mesicni splatka', key: 'monthlyPayment', lowerIsBetter: true },
-    { label: 'Celkem zaplatite', key: 'totalPayment', lowerIsBetter: true },
-    { label: 'Celkem na urocich', key: 'totalInterest', lowerIsBetter: true },
-    { label: 'Urokova sazba', key: 'interestRate', lowerIsBetter: true, isRate: true },
-    { label: 'Doba splaceni', key: 'termMonths', lowerIsBetter: true, isMonths: true },
+    { label: 'Výše půjčky', key: 'amount', lowerIsBetter: true },
+    { label: 'Měsíční splátka', key: 'monthlyPayment', lowerIsBetter: true },
+    { label: 'Celkem zaplatíte', key: 'totalPayment', lowerIsBetter: true },
+    { label: 'Celkem na úrocích', key: 'totalInterest', lowerIsBetter: true },
+    { label: 'Úroková sazba', key: 'interestRate', lowerIsBetter: true, isRate: true },
+    { label: 'Doba splácení', key: 'termMonths', lowerIsBetter: true, isMonths: true },
   ]
 
   const formatValue = (val: number, isRate?: boolean, isMonths?: boolean) => {
     if (isRate) return formatPercent(val)
-    if (isMonths) return `${val} mesicu`
+    if (isMonths) return `${val} měsíců`
     return formatCurrency(val, false)
   }
 
@@ -78,7 +78,7 @@ export function LoanCompareView({ scenarios, onClose }: LoanCompareViewProps) {
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="flex items-center gap-2 text-base font-medium">
           <GitCompare className="h-4 w-4 text-muted-foreground" />
-          Porovnani analyz
+          Porovnání scénářů
         </CardTitle>
         <Button variant="ghost" size="sm" onClick={onClose}>
           <X className="h-4 w-4" />

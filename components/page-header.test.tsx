@@ -27,9 +27,9 @@ vi.mock('./month-selector', () => ({
 
 describe('PageHeader', () => {
   it('renders the title', () => {
-    render(<PageHeader title="Prehled" />)
+    render(<PageHeader title="Přehled" />)
 
-    expect(screen.getByText('Prehled')).toBeInTheDocument()
+    expect(screen.getByText('Přehled')).toBeInTheDocument()
   })
 
   it('renders title as h1 element', () => {
@@ -43,7 +43,7 @@ describe('PageHeader', () => {
   it('shows formatted month when period is provided', () => {
     render(
       <PageHeader
-        title="Vydaje"
+        title="Výdaje"
         period={{ year: 2025, month: 1 }}
         onPeriodChange={vi.fn()}
       />

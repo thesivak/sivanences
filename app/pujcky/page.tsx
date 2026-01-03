@@ -63,6 +63,9 @@ import {
 interface BudgetData {
   totalIncome: number
   totalExpenses: number
+  totalInvestments: number
+  totalLoanPayments: number
+  balance: number
 }
 
 export default function LoansPage() {
@@ -99,6 +102,9 @@ export default function LoansPage() {
         setBudgetData({
           totalIncome: data.totalIncome,
           totalExpenses: data.totalExpenses,
+          totalInvestments: data.totalInvestments || 0,
+          totalLoanPayments: data.totalLoanPayments || 0,
+          balance: data.balance,
         })
       } catch (error) {
         console.error('Failed to fetch budget:', error)
@@ -168,12 +174,14 @@ export default function LoansPage() {
 
     let loanVerdict: LoanVerdict | null = null
 
-    // Evaluate if budget data available
+    // Evaluate if budget data available - use total outflows (expenses + investments + existing loan payments)
     if (budgetData && budgetData.totalIncome > 0) {
+      const totalCurrentOutflows = budgetData.totalExpenses + budgetData.totalInvestments + budgetData.totalLoanPayments
+
       loanVerdict = evaluateLoan(
         loanResult.monthlyPayment,
         budgetData.totalIncome,
-        budgetData.totalExpenses
+        totalCurrentOutflows
       )
       setVerdict(loanVerdict)
 
@@ -181,7 +189,7 @@ export default function LoansPage() {
       const tests = runStressTests(
         loanResult.monthlyPayment,
         budgetData.totalIncome,
-        budgetData.totalExpenses,
+        totalCurrentOutflows,
         Math.ceil(effectiveTerm / 12)
       )
       setStressTests(tests)
@@ -189,6 +197,10 @@ export default function LoansPage() {
 
     // Auto-save to history
     try {
+      const totalCurrentOutflows = budgetData
+        ? budgetData.totalExpenses + budgetData.totalInvestments + budgetData.totalLoanPayments
+        : 0
+
       const saveData = {
         amount: loanAmount,
         interestRate: effectiveRate,
@@ -202,7 +214,7 @@ export default function LoansPage() {
         verdictReason: loanVerdict?.reason,
         budgetImpact: loanVerdict?.monthlyBudgetImpact,
         budgetIncome: budgetData?.totalIncome,
-        budgetExpenses: budgetData?.totalExpenses,
+        budgetExpenses: totalCurrentOutflows,
       }
 
       const res = await fetch('/api/loans', {
@@ -235,18 +247,19 @@ export default function LoansPage() {
       }))
   }, [result])
 
-  // Prepare comparison data
+  // Prepare comparison data - use total outflows for accurate comparison
   const comparisonData = useMemo(() => {
     if (!result || !budgetData) return []
 
     const months = effectiveTerm || 0
     const years = Math.ceil(months / 12)
     const data = []
+    const totalCurrentOutflows = budgetData.totalExpenses + budgetData.totalInvestments + budgetData.totalLoanPayments
 
     for (let year = 0; year <= years; year++) {
       const monthsElapsed = Math.min(year * 12, months)
-      const withLoan = budgetData.totalIncome - budgetData.totalExpenses - result.monthlyPayment
-      const withoutLoan = budgetData.totalIncome - budgetData.totalExpenses
+      const withLoan = budgetData.totalIncome - totalCurrentOutflows - result.monthlyPayment
+      const withoutLoan = budgetData.totalIncome - totalCurrentOutflows
 
       data.push({
         year,
@@ -284,7 +297,7 @@ export default function LoansPage() {
     }
   }
 
-  // View a saved scenario
+  // View a saved scenario - recalculate using current budget
   const handleViewScenario = (scenario: SavedLoanScenario) => {
     setLoanType(scenario.type.toLowerCase() as 'mortgage' | 'consumer')
     setAmount(scenario.amount.toString())
@@ -300,26 +313,46 @@ export default function LoansPage() {
     })
     setResult(loanResult)
 
-    if (scenario.verdictStatus) {
+    // Recalculate verdict using CURRENT budget data
+    if (budgetData && budgetData.totalIncome > 0) {
+      const totalCurrentOutflows = budgetData.totalExpenses + budgetData.totalInvestments + budgetData.totalLoanPayments
+      const currentVerdict = evaluateLoan(
+        loanResult.monthlyPayment,
+        budgetData.totalIncome,
+        totalCurrentOutflows
+      )
+      setVerdict(currentVerdict)
+
+      // Run stress tests with current budget
+      const tests = runStressTests(
+        loanResult.monthlyPayment,
+        budgetData.totalIncome,
+        totalCurrentOutflows,
+        Math.ceil(scenario.termMonths / 12)
+      )
+      setStressTests(tests)
+    } else if (scenario.verdictStatus) {
+      // Fallback to stored verdict if no current budget
       setVerdict({
         status: scenario.verdictStatus,
         label: scenario.verdictLabel || '',
         reason: scenario.verdictReason || '',
         monthlyBudgetImpact: scenario.budgetImpact || 0,
       })
+
+      if (scenario.budgetIncome && scenario.budgetExpenses) {
+        const tests = runStressTests(
+          loanResult.monthlyPayment,
+          scenario.budgetIncome,
+          scenario.budgetExpenses,
+          Math.ceil(scenario.termMonths / 12)
+        )
+        setStressTests(tests)
+      } else {
+        setStressTests([])
+      }
     } else {
       setVerdict(null)
-    }
-
-    if (scenario.budgetIncome && scenario.budgetExpenses && scenario.verdictStatus) {
-      const tests = runStressTests(
-        loanResult.monthlyPayment,
-        scenario.budgetIncome,
-        scenario.budgetExpenses,
-        Math.ceil(scenario.termMonths / 12)
-      )
-      setStressTests(tests)
-    } else {
       setStressTests([])
     }
   }
@@ -381,9 +414,9 @@ export default function LoansPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Analyza pujcek</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tight">Simulátor půjčky</h1>
         <p className="mt-1 text-muted-foreground">
-          Vyhodnoceni dostupnosti a dopadu pujcky na vas rozpocet
+          Vyzkoušejte si, jak by nová půjčka ovlivnila váš měsíční rozpočet
         </p>
       </div>
 
@@ -405,30 +438,114 @@ export default function LoansPage() {
       <div className="grid grid-cols-12 gap-6">
         {/* Input Form */}
         <Card className="col-span-3 opacity-0 animate-fade-in">
-          <CardHeader>
+          <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-base font-medium">
               <Calculator className="h-4 w-4 text-muted-foreground" />
-              Parametry pujcky
+              Nová simulace
             </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Zadejte parametry nebo vyberte předvolbu
+            </p>
           </CardHeader>
           <CardContent className="space-y-5">
+            {/* Quick Presets */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Rychlé volby</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-auto py-2 px-3 justify-start"
+                  onClick={() => {
+                    setLoanType('mortgage')
+                    setAmount('3000000')
+                    setCustomRate('5.5')
+                    setRatePreset('')
+                    setCustomTermMonths('240')
+                    setTermPreset('')
+                  }}
+                >
+                  <div className="text-left">
+                    <div className="font-medium text-xs">Hypotéka 3M</div>
+                    <div className="text-[10px] text-muted-foreground">20 let, 5.5%</div>
+                  </div>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-auto py-2 px-3 justify-start"
+                  onClick={() => {
+                    setLoanType('mortgage')
+                    setAmount('5000000')
+                    setCustomRate('5.5')
+                    setRatePreset('')
+                    setCustomTermMonths('360')
+                    setTermPreset('')
+                  }}
+                >
+                  <div className="text-left">
+                    <div className="font-medium text-xs">Hypotéka 5M</div>
+                    <div className="text-[10px] text-muted-foreground">30 let, 5.5%</div>
+                  </div>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-auto py-2 px-3 justify-start"
+                  onClick={() => {
+                    setLoanType('consumer')
+                    setAmount('500000')
+                    setCustomRate('8.9')
+                    setRatePreset('')
+                    setCustomTermMonths('60')
+                    setTermPreset('')
+                  }}
+                >
+                  <div className="text-left">
+                    <div className="font-medium text-xs">Auto 500K</div>
+                    <div className="text-[10px] text-muted-foreground">5 let, 8.9%</div>
+                  </div>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-auto py-2 px-3 justify-start"
+                  onClick={() => {
+                    setLoanType('consumer')
+                    setAmount('150000')
+                    setCustomRate('10.9')
+                    setRatePreset('')
+                    setCustomTermMonths('36')
+                    setTermPreset('')
+                  }}
+                >
+                  <div className="text-left">
+                    <div className="font-medium text-xs">Spotřební 150K</div>
+                    <div className="text-[10px] text-muted-foreground">3 roky, 10.9%</div>
+                  </div>
+                </Button>
+              </div>
+            </div>
+
+            <Separator />
+
             {/* Loan Type */}
             <div className="space-y-2">
-              <Label>Typ pujcky</Label>
+              <Label>Typ půjčky</Label>
               <Select value={loanType} onValueChange={(v) => setLoanType(v as 'mortgage' | 'consumer')}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="mortgage">Hypoteka</SelectItem>
-                  <SelectItem value="consumer">Spotrebitelsky uver</SelectItem>
+                  <SelectItem value="mortgage">Hypotéka</SelectItem>
+                  <SelectItem value="consumer">Spotřebitelský úvěr</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Amount */}
             <div className="space-y-2">
-              <Label htmlFor="amount">Vyse pujcky (Kc)</Label>
+              <Label htmlFor="amount">Výše půjčky (Kč)</Label>
               <Input
                 id="amount"
                 type="number"
@@ -441,7 +558,7 @@ export default function LoansPage() {
 
             {/* Interest Rate */}
             <div className="space-y-2">
-              <Label>Urokova sazba</Label>
+              <Label>Úroková sazba</Label>
               <Select value={ratePreset} onValueChange={(v) => { setRatePreset(v); setCustomRate('') }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Vyberte sazbu" />
@@ -455,7 +572,7 @@ export default function LoansPage() {
                 </SelectContent>
               </Select>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">nebo vlastni:</span>
+                <span className="text-xs text-muted-foreground">nebo vlastní:</span>
                 <Input
                   type="number"
                   step="0.1"
@@ -470,7 +587,7 @@ export default function LoansPage() {
 
             {/* Term */}
             <div className="space-y-2">
-              <Label>Doba splaceni</Label>
+              <Label>Doba splácení</Label>
               <Select value={termPreset} onValueChange={(v) => { setTermPreset(v); setCustomTermMonths('') }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Vyberte dobu" />
@@ -484,7 +601,7 @@ export default function LoansPage() {
                 </SelectContent>
               </Select>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">nebo vlastni:</span>
+                <span className="text-xs text-muted-foreground">nebo vlastní:</span>
                 <Input
                   type="number"
                   value={customTermMonths}
@@ -492,28 +609,49 @@ export default function LoansPage() {
                   placeholder="240"
                   className="h-8 w-20 font-mono-numbers text-sm"
                 />
-                <span className="text-xs text-muted-foreground">mesicu</span>
+                <span className="text-xs text-muted-foreground">měsíců</span>
               </div>
             </div>
 
             <Separator />
 
-            {/* Current Budget Info */}
+            {/* Current Budget Info - Prominent */}
             {budgetData && (
-              <div className="space-y-2 text-sm">
-                <div className="text-muted-foreground">Aktualni rozpocet:</div>
-                <div className="flex justify-between">
-                  <span>Prijmy:</span>
-                  <span className="font-mono-numbers">{formatCurrency(budgetData.totalIncome, false)}</span>
+              <div className="rounded-lg bg-muted/50 p-3 space-y-2">
+                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Váš rozpočet
                 </div>
-                <div className="flex justify-between">
-                  <span>Vydaje:</span>
-                  <span className="font-mono-numbers">{formatCurrency(budgetData.totalExpenses, false)}</span>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Příjmy:</span>
+                    <span className="font-mono-numbers">{formatCurrency(budgetData.totalIncome, false)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Celkové výdaje:</span>
+                    <span className="font-mono-numbers text-[#B71C1C]">
+                      {formatCurrency(budgetData.totalExpenses + budgetData.totalInvestments + budgetData.totalLoanPayments, false)}
+                    </span>
+                  </div>
+                  <div className="pl-3 space-y-0.5 text-xs text-muted-foreground">
+                    <div className="flex justify-between">
+                      <span>Běžné výdaje:</span>
+                      <span className="font-mono-numbers">{formatCurrency(budgetData.totalExpenses, false)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Investice:</span>
+                      <span className="font-mono-numbers">{formatCurrency(budgetData.totalInvestments, false)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Splátky půjček:</span>
+                      <span className="font-mono-numbers">{formatCurrency(budgetData.totalLoanPayments, false)}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between font-medium">
-                  <span>Volne prostredky:</span>
-                  <span className="font-mono-numbers">
-                    {formatCurrency(budgetData.totalIncome - budgetData.totalExpenses, false)}
+                <Separator className="my-2" />
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Volné prostředky:</span>
+                  <span className="font-mono-numbers font-semibold text-[#1B5E20]">
+                    {formatCurrency(budgetData.balance, false)}
                   </span>
                 </div>
               </div>
@@ -523,8 +661,9 @@ export default function LoansPage() {
               onClick={handleCalculate}
               disabled={!amount || !effectiveRate || !effectiveTerm}
               className="w-full"
+              size="lg"
             >
-              Vypocitat
+              Spočítat splátky
             </Button>
           </CardContent>
         </Card>
@@ -552,7 +691,7 @@ export default function LoansPage() {
               <div className="grid grid-cols-3 gap-4 opacity-0 animate-fade-in stagger-2">
                 <Card>
                   <CardContent className="pt-6">
-                    <div className="text-sm text-muted-foreground">Mesicni splatka</div>
+                    <div className="text-sm text-muted-foreground">Měsíční splátka</div>
                     <div className="mt-1 font-mono-numbers text-2xl font-semibold">
                       {formatCurrency(result.monthlyPayment, false)}
                     </div>
@@ -560,7 +699,7 @@ export default function LoansPage() {
                 </Card>
                 <Card>
                   <CardContent className="pt-6">
-                    <div className="text-sm text-muted-foreground">Celkem zaplatite</div>
+                    <div className="text-sm text-muted-foreground">Celkem zaplatíte</div>
                     <div className="mt-1 font-mono-numbers text-2xl font-semibold">
                       {formatCurrency(result.totalPayment, false)}
                     </div>
@@ -568,7 +707,7 @@ export default function LoansPage() {
                 </Card>
                 <Card>
                   <CardContent className="pt-6">
-                    <div className="text-sm text-muted-foreground">Z toho uroky</div>
+                    <div className="text-sm text-muted-foreground">Z toho úroky</div>
                     <div className="mt-1 font-mono-numbers text-2xl font-semibold text-[#B71C1C]">
                       {formatCurrency(result.totalInterest, false)}
                     </div>
@@ -579,8 +718,8 @@ export default function LoansPage() {
               {/* Tabs for detailed views */}
               <Tabs defaultValue="chart" className="opacity-0 animate-fade-in stagger-3">
                 <TabsList>
-                  <TabsTrigger value="chart">Graf splaceni</TabsTrigger>
-                  <TabsTrigger value="comparison">Porovnani</TabsTrigger>
+                  <TabsTrigger value="chart">Graf splácení</TabsTrigger>
+                  <TabsTrigger value="comparison">Porovnání</TabsTrigger>
                   <TabsTrigger value="stress">Stress testy</TabsTrigger>
                 </TabsList>
 
@@ -590,7 +729,7 @@ export default function LoansPage() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-base font-medium">
                         <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                        Vyvoj zustatku pujcky
+                        Vývoj zůstatku půjčky
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -621,7 +760,7 @@ export default function LoansPage() {
                             <Area
                               type="monotone"
                               dataKey="balance"
-                              name="Zustatek"
+                              name="Zůstatek"
                               stroke="#37474F"
                               fill="#37474F"
                               fillOpacity={0.2}
@@ -639,8 +778,11 @@ export default function LoansPage() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-base font-medium">
                         <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                        Porovnani: s pujckou vs. bez pujcky
+                        Kumulativní úspory v čase
                       </CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Kolik peněz byste nashromáždili, kdybyste každý měsíc odkládali volné prostředky
+                      </p>
                     </CardHeader>
                     <CardContent>
                       <div className="h-80">
@@ -657,10 +799,16 @@ export default function LoansPage() {
                               tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`}
                               stroke="#6B6B6B"
                               fontSize={12}
+                              label={{
+                                value: 'Nashromážděno (Kč)',
+                                angle: -90,
+                                position: 'insideLeft',
+                                style: { textAnchor: 'middle', fill: '#6B6B6B', fontSize: 11 }
+                              }}
                             />
                             <Tooltip
                               formatter={(value) => formatCurrency(Number(value) || 0, false)}
-                              labelFormatter={(label) => `${label}. rok`}
+                              labelFormatter={(label) => `Po ${label} letech`}
                               contentStyle={{
                                 backgroundColor: '#FFFFFF',
                                 border: '1px solid #E5E3DC',
@@ -671,7 +819,7 @@ export default function LoansPage() {
                             <Line
                               type="monotone"
                               dataKey="withoutLoan"
-                              name="Bez pujcky"
+                              name="Úspory bez půjčky"
                               stroke="#1B5E20"
                               strokeWidth={2}
                               dot={false}
@@ -679,7 +827,7 @@ export default function LoansPage() {
                             <Line
                               type="monotone"
                               dataKey="withLoan"
-                              name="S pujckou"
+                              name="Úspory s půjčkou"
                               stroke="#B71C1C"
                               strokeWidth={2}
                               dot={false}
@@ -687,6 +835,25 @@ export default function LoansPage() {
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
+                      {comparisonData.length > 0 && (
+                        <div className="mt-4 p-3 rounded-lg bg-muted/50 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                              Rozdíl v úsporách po {comparisonData[comparisonData.length - 1]?.year} letech:
+                            </span>
+                            <span className="font-mono-numbers font-semibold text-[#B71C1C]">
+                              −{formatCurrency(
+                                (comparisonData[comparisonData.length - 1]?.withoutLoan || 0) -
+                                (comparisonData[comparisonData.length - 1]?.withLoan || 0),
+                                false
+                              )}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            S půjčkou budete mít o tuto částku méně naspořeno oproti situaci bez půjčky
+                          </p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -697,18 +864,18 @@ export default function LoansPage() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-base font-medium">
                         <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                        Stress testy - co kdyz...
+                        Stress testy - co když...
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Scenar</TableHead>
-                            <TableHead className="text-right">Prijem</TableHead>
-                            <TableHead className="text-right">Vydaje</TableHead>
+                            <TableHead>Scénář</TableHead>
+                            <TableHead className="text-right">Příjem</TableHead>
+                            <TableHead className="text-right">Výdaje</TableHead>
                             <TableHead className="text-right">Zbyde</TableHead>
-                            <TableHead>Vysledek</TableHead>
+                            <TableHead>Výsledek</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -745,11 +912,42 @@ export default function LoansPage() {
             </>
           ) : (
             <Card className="opacity-0 animate-fade-in stagger-2">
-              <CardContent className="py-16 text-center">
-                <Calculator className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                <p className="mt-4 text-muted-foreground">
-                  Zadejte parametry pujcky a kliknete na Vypocitat
-                </p>
+              <CardContent className="py-12">
+                <div className="text-center mb-8">
+                  <div className="mx-auto w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                    <Calculator className="h-8 w-8 text-muted-foreground/70" />
+                  </div>
+                  <h3 className="font-medium text-lg">Začněte simulaci</h3>
+                  <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
+                    Vyberte rychlou volbu nebo zadejte vlastní parametry a zjistěte, zda si můžete půjčku dovolit
+                  </p>
+                </div>
+
+                {/* Preview of what user will see */}
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                    Co zjistíte
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="space-y-1">
+                      <div className="text-2xl font-semibold text-muted-foreground/50">—</div>
+                      <div className="text-xs text-muted-foreground">Měsíční splátka</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-2xl font-semibold text-muted-foreground/50">—</div>
+                      <div className="text-xs text-muted-foreground">Celkem zaplatíte</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-2xl font-semibold text-muted-foreground/50">—</div>
+                      <div className="text-xs text-muted-foreground">Na úrocích</div>
+                    </div>
+                  </div>
+                  <Separator className="my-4" />
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle className="h-4 w-4" />
+                    <span>Dostupnost na základě vašeho rozpočtu</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -760,6 +958,10 @@ export default function LoansPage() {
           <LoanHistorySidebar
             scenarios={scenarios}
             selectedIds={selectedCompareIds}
+            currentBudget={budgetData ? {
+              totalIncome: budgetData.totalIncome,
+              totalExpenses: budgetData.totalExpenses + budgetData.totalInvestments + budgetData.totalLoanPayments,
+            } : null}
             onView={handleViewScenario}
             onDelete={handleDeleteScenario}
             onToggleCompare={handleToggleCompare}

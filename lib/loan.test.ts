@@ -123,8 +123,8 @@ describe('evaluateLoan', () => {
     )
 
     expect(result.status).toBe('NOT_RECOMMENDED')
-    expect(result.label).toBe('Nedoporuceno')
-    expect(result.reason).toContain('prevysuje')
+    expect(result.label).toBe('Nedoporučeno')
+    expect(result.reason).toContain('převyšuje')
   })
 
   it('returns RISKY when impact exceeds 40%', () => {
@@ -135,7 +135,7 @@ describe('evaluateLoan', () => {
     )
 
     expect(result.status).toBe('RISKY')
-    expect(result.label).toBe('Rizikove')
+    expect(result.label).toBe('Rizikové')
     expect(result.monthlyBudgetImpact).toBe(50)
   })
 
@@ -147,7 +147,7 @@ describe('evaluateLoan', () => {
     )
 
     expect(result.status).toBe('RISKY')
-    expect(result.label).toBe('Rizikove')
+    expect(result.label).toBe('Rizikové')
   })
 
   it('returns AVAILABLE when impact is between 30-40%', () => {
@@ -158,8 +158,8 @@ describe('evaluateLoan', () => {
     )
 
     expect(result.status).toBe('AVAILABLE')
-    expect(result.label).toBe('Dostupne')
-    expect(result.reason).toContain('horni hranici')
+    expect(result.label).toBe('Dostupné')
+    expect(result.reason).toContain('horní hranici')
     expect(result.monthlyBudgetImpact).toBe(35)
   })
 
@@ -171,8 +171,8 @@ describe('evaluateLoan', () => {
     )
 
     expect(result.status).toBe('AVAILABLE')
-    expect(result.label).toBe('Dostupne')
-    expect(result.reason).toContain('komfortni')
+    expect(result.label).toBe('Dostupné')
+    expect(result.reason).toContain('komfortní')
     expect(result.monthlyBudgetImpact).toBe(20)
   })
 
@@ -212,7 +212,7 @@ describe('runStressTests', () => {
   it('includes current situation as first scenario', () => {
     const results = runStressTests(basePayment, baseIncome, baseExpenses)
 
-    expect(results[0].scenario).toBe('Aktualni situace')
+    expect(results[0].scenario).toBe('Aktuální situace')
     expect(results[0].monthlyIncome).toBe(baseIncome)
     expect(results[0].monthlyExpenses).toBe(baseExpenses)
   })
@@ -221,7 +221,7 @@ describe('runStressTests', () => {
     const results = runStressTests(basePayment, baseIncome, baseExpenses)
 
     const incomeDropScenarios = results.filter((r) =>
-      r.scenario.includes('Pokles prijmu')
+      r.scenario.includes('Pokles příjmu')
     )
 
     expect(incomeDropScenarios).toHaveLength(3)

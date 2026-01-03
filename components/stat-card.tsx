@@ -76,7 +76,7 @@ export function StatCard({
           {getTrendIcon()}
           <span>
             {changePercent > 0 ? '+' : ''}
-            {changePercent.toFixed(1)} % oproti minulemu mesici
+            {changePercent.toFixed(1)} % oproti minulému měsíci
           </span>
         </div>
       )}

@@ -176,32 +176,32 @@ export default function GoalsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Sporici cile</h1>
-          <p className="mt-1 text-muted-foreground">Sprava vasich financnich cilu</p>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">Spořící cíle</h1>
+          <p className="mt-1 text-muted-foreground">Správa vašich finančních cílů</p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Novy cil
+              Nový cíl
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Vytvorit novy sporici cil</DialogTitle>
+              <DialogTitle>Vytvořit nový spořící cíl</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label htmlFor="goal-name">Nazev cile</Label>
+                <Label htmlFor="goal-name">Název cíle</Label>
                 <Input
                   id="goal-name"
                   value={newGoal.name}
                   onChange={(e) => setNewGoal({ ...newGoal, name: e.target.value })}
-                  placeholder="napr. Dovolena"
+                  placeholder="např. Dovolená"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="goal-target">Cilova castka (volitelne)</Label>
+                <Label htmlFor="goal-target">Cílová částka (volitelné)</Label>
                 <Input
                   id="goal-target"
                   type="number"
@@ -220,11 +220,11 @@ export default function GoalsPage() {
                   className="h-4 w-4 rounded border-border"
                 />
                 <Label htmlFor="goal-emergency" className="text-sm font-normal">
-                  Nouzovy fond (doporuceni: 3x mesicni vydaje)
+                  Nouzový fond (doporučení: 3x měsíční výdaje)
                 </Label>
               </div>
               <Button onClick={handleCreateGoal} disabled={!newGoal.name.trim()}>
-                Vytvorit
+                Vytvořit
               </Button>
             </div>
           </DialogContent>
@@ -240,7 +240,7 @@ export default function GoalsPage() {
                 <PiggyBank className="h-6 w-6 text-[#37474F]" />
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Celkem nasporeno</div>
+                <div className="text-sm text-muted-foreground">Celkem naspořeno</div>
                 <div className="font-mono-numbers text-2xl font-semibold">
                   {formatCurrency(totalSaved, false)}
                 </div>
@@ -248,7 +248,7 @@ export default function GoalsPage() {
             </div>
             {data?.avgMonthlyExpenses && (
               <div className="text-right">
-                <div className="text-sm text-muted-foreground">Prumerny mesicni vydaj</div>
+                <div className="text-sm text-muted-foreground">Průměrný měsíční výdaj</div>
                 <div className="font-mono-numbers text-lg font-medium">
                   {formatCurrency(data.avgMonthlyExpenses, false)}
                 </div>
@@ -269,9 +269,9 @@ export default function GoalsPage() {
         <Card className="opacity-0 animate-fade-in stagger-2">
           <CardContent className="py-12 text-center">
             <Target className="mx-auto h-12 w-12 text-muted-foreground/50" />
-            <p className="mt-4 text-muted-foreground">Zatim nemate zadne sporici cile</p>
+            <p className="mt-4 text-muted-foreground">Zatím nemáte žádné spořící cíle</p>
             <Button className="mt-4" onClick={() => setCreateDialogOpen(true)}>
-              Vytvorit prvni cil
+              Vytvořit první cíl
             </Button>
           </CardContent>
         </Card>
@@ -292,7 +292,7 @@ export default function GoalsPage() {
                     )}
                     {goal.name}
                     {goal.isEmergency && (
-                      <span className="text-xs font-normal text-muted-foreground">(Nouzovy)</span>
+                      <span className="text-xs font-normal text-muted-foreground">(Nouzový)</span>
                     )}
                   </div>
                   <div className="flex items-center gap-1">
@@ -333,7 +333,7 @@ export default function GoalsPage() {
                     )}
                     {goal.isEmergency && goal.recommendedTarget && (
                       <p className="mt-2 text-xs text-muted-foreground">
-                        Doporuceno: {formatCurrency(goal.recommendedTarget, false)}
+                        Doporučeno: {formatCurrency(goal.recommendedTarget, false)} ({goal.emergencyFundMonths ?? 3}x měsíční výdaje)
                       </p>
                     )}
                   </div>
@@ -346,7 +346,7 @@ export default function GoalsPage() {
                       onClick={() => openTransactionDialog(goal, 'deposit')}
                     >
                       <Plus className="mr-1 h-3 w-3" />
-                      Vlozit
+                      Vložit
                     </Button>
                     <Button
                       variant="outline"
@@ -363,7 +363,7 @@ export default function GoalsPage() {
                   {goal.transactions && goal.transactions.length > 0 && (
                     <div className="border-t border-border pt-3">
                       <div className="text-xs font-medium text-muted-foreground mb-2">
-                        Posledni transakce
+                        Poslední transakce
                       </div>
                       <div className="space-y-1">
                         {goal.transactions.slice(0, 3).map((tx) => (
@@ -372,7 +372,7 @@ export default function GoalsPage() {
                             className="flex items-center justify-between text-xs"
                           >
                             <span className="text-muted-foreground">
-                              {tx.description || (tx.amount > 0 ? 'Vklad' : 'Vyber')}
+                              {tx.description || (tx.amount > 0 ? 'Vklad' : 'Výběr')}
                             </span>
                             <span
                               className={cn(
@@ -400,16 +400,16 @@ export default function GoalsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {transactionType === 'deposit' ? 'Vlozit prostredky' : 'Vybrat prostredky'}
+              {transactionType === 'deposit' ? 'Vložit prostředky' : 'Vybrat prostředky'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="space-y-2">
-              <Label>Cil</Label>
+              <Label>Cíl</Label>
               <div className="font-medium">{selectedGoal?.name}</div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tx-amount">Castka</Label>
+              <Label htmlFor="tx-amount">Částka</Label>
               <Input
                 id="tx-amount"
                 type="number"
@@ -420,16 +420,16 @@ export default function GoalsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tx-desc">Popis (volitelne)</Label>
+              <Label htmlFor="tx-desc">Popis (volitelné)</Label>
               <Input
                 id="tx-desc"
                 value={transactionDesc}
                 onChange={(e) => setTransactionDesc(e.target.value)}
-                placeholder="napr. Mesicni vklad"
+                placeholder="např. Měsíční vklad"
               />
             </div>
             <Button onClick={handleTransaction} disabled={!transactionAmount}>
-              {transactionType === 'deposit' ? 'Vlozit' : 'Vybrat'}
+              {transactionType === 'deposit' ? 'Vložit' : 'Vybrat'}
             </Button>
           </div>
         </DialogContent>
@@ -439,20 +439,20 @@ export default function GoalsPage() {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Upravit cil</DialogTitle>
+            <DialogTitle>Upravit cíl</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Nazev cile</Label>
+              <Label htmlFor="edit-name">Název cíle</Label>
               <Input
                 id="edit-name"
                 value={editGoal?.name || ''}
                 onChange={(e) => setEditGoal(editGoal ? { ...editGoal, name: e.target.value } : null)}
-                placeholder="napr. Dovolena"
+                placeholder="např. Dovolená"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-current">Aktualni castka</Label>
+              <Label htmlFor="edit-current">Aktuální částka</Label>
               <Input
                 id="edit-current"
                 type="number"
@@ -463,7 +463,7 @@ export default function GoalsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-target">Cilova castka (volitelne)</Label>
+              <Label htmlFor="edit-target">Cílová částka (volitelné)</Label>
               <Input
                 id="edit-target"
                 type="number"
@@ -482,11 +482,11 @@ export default function GoalsPage() {
                 className="h-4 w-4 rounded border-border"
               />
               <Label htmlFor="edit-emergency" className="text-sm font-normal">
-                Nouzovy fond
+                Nouzový fond
               </Label>
             </div>
             <Button onClick={handleEditGoal} disabled={!editGoal?.name.trim()}>
-              Ulozit zmeny
+              Uložit změny
             </Button>
           </div>
         </DialogContent>
@@ -496,16 +496,16 @@ export default function GoalsPage() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Smazat cil</DialogTitle>
+            <DialogTitle>Smazat cíl</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <p className="text-muted-foreground">
-              Opravdu chcete smazat cil <span className="font-medium text-foreground">{goalToDelete?.name}</span>?
-              Tato akce je nevratna a smaze i vsechny transakce spojene s timto cilem.
+              Opravdu chcete smazat cíl <span className="font-medium text-foreground">{goalToDelete?.name}</span>?
+              Tato akce je nevratná a smaže i všechny transakce spojené s tímto cílem.
             </p>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-                Zrusit
+                Zrušit
               </Button>
               <Button variant="destructive" onClick={handleDeleteGoal}>
                 Smazat

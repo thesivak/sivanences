@@ -111,6 +111,11 @@ export async function GET(request: Request) {
       orderBy: { order: 'asc' },
     })
 
+    // Fetch household settings for emergency fund target
+    const householdSettings = await prisma.householdSettings.findUnique({
+      where: { id: 'default' },
+    })
+
     // Get active loans with calculated balances
     const activeLoansRaw = await prisma.activeLoan.findMany({
       orderBy: { createdAt: 'desc' },
@@ -135,6 +140,17 @@ export async function GET(request: Request) {
 
     const totalLoanPayments = activeLoans.reduce((sum, loan) => sum + loan.monthlyPayment, 0)
     const totalLoanBalance = activeLoans.reduce((sum, loan) => sum + loan.calculatedBalance, 0)
+
+    // Calculate previous month loan payments (loans that were active in previous month)
+    const prevMonthDate = new Date(prevYear, prevMonth - 1, 1)
+    const prevMonthLoanPayments = activeLoansRaw.reduce((sum, loan) => {
+      const startDate = new Date(loan.startDate)
+      // Only count if loan had started by the previous month
+      if (startDate <= prevMonthDate) {
+        return sum + loan.monthlyPayment
+      }
+      return sum
+    }, 0)
 
     // Calculate 3-month average expenses for emergency fund recommendation
     const last3MonthsExpenses = await prisma.expense.groupBy({
@@ -162,6 +178,7 @@ export async function GET(request: Request) {
         totalIncome: prevIncome._sum.amount || 0,
         totalExpenses: prevExpenses._sum.amount || 0,
         totalInvestments: prevInvestments._sum.amount || 0,
+        totalLoanPayments: prevMonthLoanPayments,
       },
       categories: categories.map((cat) => ({
         id: cat.id,
@@ -182,11 +199,21 @@ export async function GET(request: Request) {
         order: type.order,
         investment: type.investments[0] || null,
       })),
-      savingGoals: savingGoals.map((goal) => ({
-        ...goal,
-        progress: goal.targetAmount ? (goal.currentAmount / goal.targetAmount) * 100 : 0,
-        recommendedTarget: goal.isEmergency ? avgMonthlyExpenses * 3 : undefined,
-      })),
+      savingGoals: savingGoals.map((goal) => {
+        // For emergency fund, use household settings target if available
+        const effectiveTarget = goal.isEmergency && householdSettings?.emergencyFundTarget
+          ? householdSettings.emergencyFundTarget
+          : goal.targetAmount
+        const emergencyFundMonths = householdSettings?.emergencyFundMonths ?? 3
+
+        return {
+          ...goal,
+          targetAmount: effectiveTarget,
+          progress: effectiveTarget ? (goal.currentAmount / effectiveTarget) * 100 : 0,
+          recommendedTarget: goal.isEmergency ? avgMonthlyExpenses * emergencyFundMonths : undefined,
+          emergencyFundMonths: goal.isEmergency ? emergencyFundMonths : undefined,
+        }
+      }),
       activeLoans,
       avgMonthlyExpenses,
     })

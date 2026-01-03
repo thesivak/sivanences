@@ -53,7 +53,7 @@ export function IncomeBreakdown({ sources, className }: IncomeBreakdownProps) {
 
   if (data.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">Zadne prijmy tento mesic</p>
+      <p className="text-sm text-muted-foreground">Žádné příjmy tento měsíc</p>
     )
   }
 

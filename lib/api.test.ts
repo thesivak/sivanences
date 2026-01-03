@@ -192,7 +192,7 @@ describe('validateRequiredFields', () => {
   })
 
   it('returns valid: false with missing fields list when fields are missing', () => {
-    const body = { name: 'Test' }
+    const body: Record<string, unknown> = { name: 'Test' }
     const result = validateRequiredFields(body, ['name', 'amount', 'year'])
 
     expect(result.valid).toBe(false)

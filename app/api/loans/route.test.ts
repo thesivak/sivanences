@@ -40,8 +40,7 @@ describe('GET /api/loans', () => {
 
     mockPrisma.loanScenario.findMany.mockResolvedValue(mockScenarios)
 
-    const request = new Request('http://localhost/api/loans')
-    const response = await GET(request)
+    const response = await GET()
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -54,8 +53,7 @@ describe('GET /api/loans', () => {
   it('returns empty array when no scenarios exist', async () => {
     mockPrisma.loanScenario.findMany.mockResolvedValue([])
 
-    const request = new Request('http://localhost/api/loans')
-    const response = await GET(request)
+    const response = await GET()
     const data = await response.json()
 
     expect(data).toEqual([])
@@ -64,8 +62,7 @@ describe('GET /api/loans', () => {
   it('returns 500 error when database query fails', async () => {
     mockPrisma.loanScenario.findMany.mockRejectedValue(new Error('DB error'))
 
-    const request = new Request('http://localhost/api/loans')
-    const response = await GET(request)
+    const response = await GET()
     const data = await response.json()
 
     expect(response.status).toBe(500)
@@ -245,7 +242,7 @@ describe('PATCH /api/loans', () => {
   it('updates scenario name successfully', async () => {
     const mockScenario = {
       id: 'loan1',
-      name: 'Novy nazev',
+      name: 'Nový název',
     }
 
     mockPrisma.loanScenario.update.mockResolvedValue(mockScenario)
@@ -255,7 +252,7 @@ describe('PATCH /api/loans', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: 'loan1',
-        name: 'Novy nazev',
+        name: 'Nový název',
       }),
     })
 
@@ -266,7 +263,7 @@ describe('PATCH /api/loans', () => {
     expect(data).toEqual(mockScenario)
     expect(mockPrisma.loanScenario.update).toHaveBeenCalledWith({
       where: { id: 'loan1' },
-      data: { name: 'Novy nazev' },
+      data: { name: 'Nový název' },
     })
   })
 
@@ -275,7 +272,7 @@ describe('PATCH /api/loans', () => {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        name: 'Novy nazev',
+        name: 'Nový název',
       }),
     })
 

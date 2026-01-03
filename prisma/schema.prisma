@@ -167,3 +167,39 @@ model ActiveLoan {
   updatedAt DateTime @updatedAt
 }
 
+// Household settings for benchmark comparisons
+model HouseholdSettings {
+  id                   String  @id @default("default")
+  totalMembers         Int     @default(1)  // Total people in household
+  dependentChildren    Int     @default(0)  // Number of dependent children
+  adults               Int     @default(1)  // Number of adults
+  emergencyFundTarget  Int?    // User-defined emergency fund target in Kč (null = use calculation based on months)
+  emergencyFundMonths  Int     @default(3)  // Number of months of expenses for emergency fund
+  sidebarExpanded      Boolean @default(false)  // Whether sidebar is expanded or collapsed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// AI insights cache for performance
+model AIInsightsCache {
+  id               String   @id @default("default")
+  overviewInsight  String   // Main overview (narrative + bullets)
+  categoryInsights String   // JSON: { categoryId: insight }
+  generatedAt      DateTime
+  dataHash         String   // Hash of source data for invalidation
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// AI feedback collection
+model AIFeedback {
+  id          String   @id @default(cuid())
+  insightType String   // "overview" | "category" | "suggestion"
+  insightId   String?  // Optional: category ID or suggestion identifier
+  isPositive  Boolean  // true = thumbs up, false = thumbs down
+
+  createdAt DateTime @default(now())
+}
+

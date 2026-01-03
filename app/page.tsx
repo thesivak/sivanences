@@ -10,6 +10,7 @@ import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { AlertCircle, TrendingUp, Wallet, PiggyBank, CreditCard } from 'lucide-react'
 import { IncomeBreakdown } from '@/components/income-breakdown'
+import { AIFinancialOverview } from '@/components/ai-financial-overview'
 import type { DashboardSummary } from '@/lib/types'
 
 export default function DashboardPage() {
@@ -21,7 +22,7 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Prehled"
+          title="Přehled"
           period={period}
           onPeriodChange={(year, month) => setPeriod({ year, month })}
         />
@@ -38,13 +39,13 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Prehled"
+          title="Přehled"
           period={period}
           onPeriodChange={(year, month) => setPeriod({ year, month })}
         />
         <div className="flex items-center gap-2 text-muted-foreground">
           <AlertCircle className="h-5 w-5" />
-          <span>Nepodarilo se nacist data</span>
+          <span>Nepodařilo se načíst data</span>
         </div>
       </div>
     )
@@ -59,47 +60,59 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Prehled"
+        title="Přehled"
         period={period}
         onPeriodChange={(year, month) => setPeriod({ year, month })}
       />
 
-      {/* Main Stats */}
-      <div className={cn(
-        "grid gap-4 opacity-0 animate-fade-in",
-        (data.totalLoanPayments > 0) ? "grid-cols-5" : "grid-cols-4"
-      )}>
-        <StatCard
-          label="Prijmy"
-          value={data.totalIncome || 0}
-          previousValue={data.previousMonth?.totalIncome}
-          type="income"
-        />
-        <StatCard
-          label="Vydaje"
-          value={data.totalExpenses || 0}
-          previousValue={data.previousMonth?.totalExpenses}
-          type="expense"
-        />
-        <StatCard
-          label="Investice"
-          value={data.totalInvestments || 0}
-          previousValue={data.previousMonth?.totalInvestments}
-          type="investment"
-        />
-        {(data.totalLoanPayments > 0) && (
+      {/* AI Financial Overview - Hero Section */}
+      <AIFinancialOverview period={period} />
+
+      {/* Main Financial Summary */}
+      <div className="space-y-3 opacity-0 animate-fade-in">
+        {/* Primary: Income → Total Outgoing → Balance */}
+        <div className="grid grid-cols-3 gap-4">
           <StatCard
-            label="Splatky pujcek"
-            value={data.totalLoanPayments}
+            label="Příjmy"
+            value={data.totalIncome || 0}
+            previousValue={data.previousMonth?.totalIncome}
+            type="income"
+          />
+          <StatCard
+            label="Celkové výdaje"
+            value={(data.totalExpenses || 0) + (data.totalInvestments || 0) + (data.totalLoanPayments || 0)}
+            previousValue={data.previousMonth ? (data.previousMonth.totalExpenses + data.previousMonth.totalInvestments + (data.previousMonth.totalLoanPayments || 0)) : undefined}
             type="expense"
           />
-        )}
-        <StatCard
-          label="Bilance"
-          value={data.balance || 0}
-          previousValue={data.previousMonth ? (data.previousMonth.totalIncome - data.previousMonth.totalExpenses - data.previousMonth.totalInvestments) : undefined}
-          type="balance"
-        />
+          <StatCard
+            label="Bilance"
+            value={data.balance || 0}
+            previousValue={data.previousMonth ? (data.previousMonth.totalIncome - data.previousMonth.totalExpenses - data.previousMonth.totalInvestments - (data.previousMonth.totalLoanPayments || 0)) : undefined}
+            type="balance"
+          />
+        </div>
+
+        {/* Expense Breakdown */}
+        <div className="grid grid-cols-3 gap-4">
+          <div className="rounded border border-border/50 bg-muted/30 px-4 py-3">
+            <div className="text-xs text-muted-foreground">Běžné výdaje</div>
+            <div className="font-mono-numbers text-lg font-medium text-[#B71C1C]">
+              {formatCurrency(data.totalExpenses || 0, false)}
+            </div>
+          </div>
+          <div className="rounded border border-border/50 bg-muted/30 px-4 py-3">
+            <div className="text-xs text-muted-foreground">Investice</div>
+            <div className="font-mono-numbers text-lg font-medium text-[#37474F]">
+              {formatCurrency(data.totalInvestments || 0, false)}
+            </div>
+          </div>
+          <div className="rounded border border-border/50 bg-muted/30 px-4 py-3">
+            <div className="text-xs text-muted-foreground">Splátky půjček</div>
+            <div className="font-mono-numbers text-lg font-medium text-[#B71C1C]">
+              {formatCurrency(data.totalLoanPayments || 0, false)}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Secondary Content */}
@@ -112,12 +125,12 @@ export default function DashboardPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-medium">
               <Wallet className="h-4 w-4 text-muted-foreground" />
-              Nejvyssi vydaje
+              Nejvyšší výdaje
             </CardTitle>
           </CardHeader>
           <CardContent>
             {topExpenses.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Zadne vydaje tento mesic</p>
+              <p className="text-sm text-muted-foreground">Žádné výdaje tento měsíc</p>
             ) : (
               <div className="space-y-3">
                 {topExpenses.map((cat, index) => (
@@ -144,12 +157,12 @@ export default function DashboardPage() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base font-medium">
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
-                Aktivni pujcky
+                Aktivní půjčky
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="mb-4 rounded-lg bg-muted/50 p-3">
-                <div className="text-sm text-muted-foreground">Celkem k splaceni</div>
+                <div className="text-sm text-muted-foreground">Celkem k splacení</div>
                 <div className="font-mono-numbers text-xl font-semibold">
                   {formatCurrency(data.totalLoanBalance, false)}
                 </div>
@@ -165,7 +178,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="text-right">
                       <div className="font-mono-numbers text-sm">
-                        {formatCurrency(loan.monthlyPayment, false)}/mes
+                        {formatCurrency(loan.monthlyPayment, false)}/měs
                       </div>
                       <div className="font-mono-numbers text-xs text-muted-foreground">
                         {formatCurrency(loan.calculatedBalance, false)}
@@ -183,12 +196,12 @@ export default function DashboardPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-medium">
               <PiggyBank className="h-4 w-4 text-muted-foreground" />
-              Sporici cile
+              Spořící cíle
             </CardTitle>
           </CardHeader>
           <CardContent>
             {(data.savingGoals || []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">Zadne sporici cile</p>
+              <p className="text-sm text-muted-foreground">Žádné spořící cíle</p>
             ) : (
               <div className="space-y-4">
                 {(data.savingGoals || []).slice(0, 4).map((goal) => (
@@ -197,7 +210,7 @@ export default function DashboardPage() {
                       <span className="text-sm font-medium">
                         {goal.name}
                         {goal.isEmergency && (
-                          <span className="ml-2 text-xs text-muted-foreground">(Nouzovy)</span>
+                          <span className="ml-2 text-xs text-muted-foreground">(Nouzový)</span>
                         )}
                       </span>
                       <span className="font-mono-numbers text-xs text-muted-foreground">
@@ -215,7 +228,7 @@ export default function DashboardPage() {
                     )}
                     {goal.isEmergency && goal.recommendedTarget && (
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Doporuceno: {formatCurrency(goal.recommendedTarget, false)} (3x mesicni vydaje)
+                        Doporučeno: {formatCurrency(goal.recommendedTarget, false)} ({goal.emergencyFundMonths ?? 3}x měsíční výdaje)
                       </p>
                     )}
                   </div>
@@ -231,7 +244,7 @@ export default function DashboardPage() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base font-medium">
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            Rozdeleni prijmu
+            Rozdělení příjmů
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -242,13 +255,13 @@ export default function DashboardPage() {
       {/* Quick Stats Footer */}
       <div className="flex items-center justify-between border-t border-border pt-6 text-sm text-muted-foreground opacity-0 animate-fade-in stagger-5">
         <div>
-          Prumerny mesicni vydaj:{' '}
+          Průměrné měsíční výdaje:{' '}
           <span className="font-mono-numbers font-medium text-foreground">
             {formatCurrency(data.avgMonthlyExpenses, false)}
           </span>
         </div>
         <div>
-          Mira usporeni:{' '}
+          Míra úspor:{' '}
           <span
             className={cn(
               'font-mono-numbers font-medium',

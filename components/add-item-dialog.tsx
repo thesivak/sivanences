@@ -79,7 +79,7 @@ export function AddItemDialog({
             />
           </div>
           <Button onClick={handleAdd} disabled={!value.trim() || loading}>
-            {loading ? 'Pridavam...' : 'Pridat'}
+            {loading ? 'Přidávám...' : 'Přidat'}
           </Button>
         </div>
       </DialogContent>

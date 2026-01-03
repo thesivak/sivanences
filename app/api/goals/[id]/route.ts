@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { invalidateInsightsCache } from '@/lib/api'
 
 export async function PUT(
   request: Request,
@@ -24,6 +25,9 @@ export async function PUT(
       },
     })
 
+    // Invalidate AI insights cache when goals change
+    await invalidateInsightsCache()
+
     return NextResponse.json(goal)
   } catch (error) {
     console.error('Error updating goal:', error)
@@ -41,6 +45,9 @@ export async function DELETE(
     await prisma.savingGoal.delete({
       where: { id },
     })
+
+    // Invalidate AI insights cache when goals change
+    await invalidateInsightsCache()
 
     return NextResponse.json({ success: true })
   } catch (error) {

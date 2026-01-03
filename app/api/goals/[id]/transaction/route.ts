@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { invalidateInsightsCache } from '@/lib/api'
 
 export async function POST(
   request: Request,
@@ -35,6 +36,9 @@ export async function POST(
 
       return { transaction, goal }
     })
+
+    // Invalidate AI insights cache when goals change
+    await invalidateInsightsCache()
 
     return NextResponse.json(result)
   } catch (error) {

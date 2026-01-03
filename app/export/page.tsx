@@ -59,24 +59,24 @@ export default function ExportPage() {
       {/* Header */}
       <div>
         <h1 className="font-display text-3xl font-semibold tracking-tight">Export dat</h1>
-        <p className="mt-1 text-muted-foreground">Zaloha a export vasich financnich dat</p>
+        <p className="mt-1 text-muted-foreground">Záloha a export vašich finančních dat</p>
       </div>
 
       {/* Year Selection */}
       <Card className="opacity-0 animate-fade-in">
         <CardHeader>
           <CardTitle className="text-base font-medium">Rozsah exportu</CardTitle>
-          <CardDescription>Vyberte rok pro export nebo exportujte vsechna data</CardDescription>
+          <CardDescription>Vyberte rok pro export nebo exportujte všechna data</CardDescription>
         </CardHeader>
         <CardContent>
           <Select value={exportYear} onValueChange={setExportYear}>
             <SelectTrigger className="w-48">
               <SelectValue>
-                {exportYear === 'all' ? 'Vsechna data' : `Rok ${exportYear}`}
+                {exportYear === 'all' ? 'Všechna data' : `Rok ${exportYear}`}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Vsechna data</SelectItem>
+              <SelectItem value="all">Všechna data</SelectItem>
               {years.map((y) => (
                 <SelectItem key={y} value={y.toString()}>
                   Rok {y}
@@ -97,7 +97,7 @@ export default function ExportPage() {
               CSV Export
             </CardTitle>
             <CardDescription>
-              Pro import do tabulkoveho procesoru (Excel, Google Sheets)
+              Pro import do tabulkového procesoru (Excel, Google Sheets)
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -105,10 +105,10 @@ export default function ExportPage() {
               <div className="text-sm text-muted-foreground">
                 <p>CSV export obsahuje:</p>
                 <ul className="mt-2 list-disc list-inside space-y-1">
-                  <li>Vydaje podle kategorii a mesicu</li>
-                  <li>Prijmy podle zdroje a mesicu</li>
-                  <li>Sporici cile a jejich stav</li>
-                  <li>Danove odpocty</li>
+                  <li>Výdaje podle kategorií a měsíců</li>
+                  <li>Příjmy podle zdroje a měsíců</li>
+                  <li>Spořící cíle a jejich stav</li>
+                  <li>Daňové odpočty</li>
                 </ul>
               </div>
               <Button
@@ -121,7 +121,7 @@ export default function ExportPage() {
                 ) : (
                   <>
                     <Download className="mr-2 h-4 w-4" />
-                    Stahnout CSV
+                    Stáhnout CSV
                   </>
                 )}
               </Button>
@@ -137,7 +137,7 @@ export default function ExportPage() {
               JSON Export
             </CardTitle>
             <CardDescription>
-              Kompletni zaloha dat ve strojove citelnem formatu
+              Kompletní záloha dat ve strojově čitelném formátu
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -145,10 +145,10 @@ export default function ExportPage() {
               <div className="text-sm text-muted-foreground">
                 <p>JSON export obsahuje:</p>
                 <ul className="mt-2 list-disc list-inside space-y-1">
-                  <li>Vsechny kategorie a zdroje prijmu</li>
-                  <li>Kompletni historii vydaju a prijmu</li>
-                  <li>Sporici cile s transakcemi</li>
-                  <li>Danove odpocty</li>
+                  <li>Všechny kategorie a zdroje příjmů</li>
+                  <li>Kompletní historii výdajů a příjmů</li>
+                  <li>Spořící cíle s transakcemi</li>
+                  <li>Daňové odpočty</li>
                 </ul>
               </div>
               <Button
@@ -162,7 +162,7 @@ export default function ExportPage() {
                 ) : (
                   <>
                     <Download className="mr-2 h-4 w-4" />
-                    Stahnout JSON
+                    Stáhnout JSON
                   </>
                 )}
               </Button>
@@ -176,19 +176,19 @@ export default function ExportPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base font-medium">
             <Database className="h-5 w-5 text-muted-foreground" />
-            Zaloha databaze
+            Záloha databáze
           </CardTitle>
           <CardDescription>
-            Informace o prime zaloze databazoveho souboru
+            Informace o přímé záloze databázového souboru
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-sm text-muted-foreground space-y-3">
             <p>
-              Databaze aplikace je ulozena v souboru <code className="font-mono-numbers bg-muted px-1.5 py-0.5 rounded">prisma/dev.db</code> v adresari aplikace.
+              Databáze aplikace je uložena v souboru <code className="font-mono-numbers bg-muted px-1.5 py-0.5 rounded">prisma/dev.db</code> v adresáři aplikace.
             </p>
             <p>
-              Pro kompletni zalohu doporucujeme pravidelne kopirovat tento soubor na externi uloziste.
+              Pro kompletní zálohu doporučujeme pravidelně kopírovat tento soubor na externí úložiště.
             </p>
           </div>
         </CardContent>
@@ -202,16 +202,16 @@ export default function ExportPage() {
             PDF Reporty
           </CardTitle>
           <CardDescription>
-            Generovani PDF reportu bude dostupne v budouci verzi
+            Generování PDF reportů bude dostupné v budoucí verzi
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-sm text-muted-foreground">
-            <p>Planovane typy reportu:</p>
+            <p>Plánované typy reportů:</p>
             <ul className="mt-2 list-disc list-inside space-y-1">
-              <li>Mesicni souhrn rozpoctu</li>
-              <li>Rocni prehled s trendy</li>
-              <li>Stav sporicich cilu</li>
+              <li>Měsíční souhrn rozpočtu</li>
+              <li>Roční přehled s trendy</li>
+              <li>Stav spořících cílů</li>
             </ul>
           </div>
         </CardContent>

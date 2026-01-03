@@ -1,5 +1,8 @@
 'use client'
 
+import { cn } from '@/lib/utils'
+import { useSidebar } from '@/lib/sidebar-context'
+
 interface MainLayoutProps {
   children: React.ReactNode
 }
@@ -9,9 +12,11 @@ interface MainLayoutProps {
  * Note: Period management is handled by individual pages via useMonthlyData hook
  */
 export function MainLayout({ children }: MainLayoutProps) {
+  const { expanded } = useSidebar()
+
   return (
-    <main className="ml-56 min-h-screen">
-      <div className="px-8 py-8">{children}</div>
+    <main className={cn('min-h-screen transition-all duration-200', expanded ? 'ml-44' : 'ml-14')}>
+      <div className="px-6 py-6">{children}</div>
     </main>
   )
 }

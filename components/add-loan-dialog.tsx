@@ -175,37 +175,37 @@ export function AddLoanDialog({ open, onOpenChange, onSave, editLoan }: AddLoanD
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{editLoan ? 'Upravit pujcku' : 'Pridat existujici pujcku'}</DialogTitle>
+          <DialogTitle>{editLoan ? 'Upravit půjčku' : 'Přidat existující půjčku'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-4">
           {/* Name */}
           <div className="space-y-2">
-            <Label htmlFor="loan-name">Nazev pujcky</Label>
+            <Label htmlFor="loan-name">Název půjčky</Label>
             <Input
               id="loan-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="napr. Hypoteka na byt"
+              placeholder="např. Hypotéka na byt"
             />
           </div>
 
           {/* Type */}
           <div className="space-y-2">
-            <Label>Typ pujcky</Label>
+            <Label>Typ půjčky</Label>
             <Select value={type} onValueChange={(v) => setType(v as 'MORTGAGE' | 'CONSUMER')}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="MORTGAGE">Hypoteka</SelectItem>
-                <SelectItem value="CONSUMER">Spotrebitelsky uver</SelectItem>
+                <SelectItem value="MORTGAGE">Hypotéka</SelectItem>
+                <SelectItem value="CONSUMER">Spotřebitelský úvěr</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Original Amount */}
           <div className="space-y-2">
-            <Label htmlFor="original-amount">Puvodni vyse pujcky (Kc)</Label>
+            <Label htmlFor="original-amount">Původní výše půjčky (Kč)</Label>
             <Input
               id="original-amount"
               type="number"
@@ -218,7 +218,7 @@ export function AddLoanDialog({ open, onOpenChange, onSave, editLoan }: AddLoanD
 
           {/* Interest Rate */}
           <div className="space-y-2">
-            <Label>Urokova sazba (%)</Label>
+            <Label>Úroková sazba (%)</Label>
             <Select value={ratePreset} onValueChange={handleRatePresetChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Vyberte sazbu" />
@@ -232,7 +232,7 @@ export function AddLoanDialog({ open, onOpenChange, onSave, editLoan }: AddLoanD
               </SelectContent>
             </Select>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">nebo vlastni:</span>
+              <span className="text-xs text-muted-foreground">nebo vlastní:</span>
               <Input
                 type="number"
                 step="0.1"
@@ -247,7 +247,7 @@ export function AddLoanDialog({ open, onOpenChange, onSave, editLoan }: AddLoanD
 
           {/* Term */}
           <div className="space-y-2">
-            <Label>Puvodni doba splaceni</Label>
+            <Label>Původní doba splácení</Label>
             <Select value={termPreset} onValueChange={handleTermPresetChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Vyberte dobu" />
@@ -261,7 +261,7 @@ export function AddLoanDialog({ open, onOpenChange, onSave, editLoan }: AddLoanD
               </SelectContent>
             </Select>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">nebo vlastni:</span>
+              <span className="text-xs text-muted-foreground">nebo vlastní:</span>
               <Input
                 type="number"
                 value={termMonths}
@@ -269,13 +269,13 @@ export function AddLoanDialog({ open, onOpenChange, onSave, editLoan }: AddLoanD
                 placeholder="240"
                 className="h-8 w-20 font-mono-numbers text-sm"
               />
-              <span className="text-xs text-muted-foreground">mesicu</span>
+              <span className="text-xs text-muted-foreground">měsíců</span>
             </div>
           </div>
 
           {/* Start Date */}
           <div className="space-y-2">
-            <Label htmlFor="start-date">Datum zacatku splaceni</Label>
+            <Label htmlFor="start-date">Datum začátku splácení</Label>
             <Input
               id="start-date"
               type="date"
@@ -287,10 +287,10 @@ export function AddLoanDialog({ open, onOpenChange, onSave, editLoan }: AddLoanD
           {/* Monthly Payment */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="monthly-payment">Mesicni splatka (Kc)</Label>
+              <Label htmlFor="monthly-payment">Měsíční splátka (Kč)</Label>
               {estimatedPayment && autoCalculate && (
                 <span className="text-xs text-muted-foreground">
-                  Vypocteno: {formatCurrency(estimatedPayment, false)}
+                  Vypočteno: {formatCurrency(estimatedPayment, false)}
                 </span>
               )}
             </div>
@@ -308,7 +308,7 @@ export function AddLoanDialog({ open, onOpenChange, onSave, editLoan }: AddLoanD
                 className="text-xs text-muted-foreground hover:text-foreground underline"
                 onClick={() => setAutoCalculate(true)}
               >
-                Vypocitat automaticky
+                Vypočítat automaticky
               </button>
             )}
           </div>
@@ -318,7 +318,7 @@ export function AddLoanDialog({ open, onOpenChange, onSave, editLoan }: AddLoanD
             disabled={saving || !name || !originalAmount || !interestRate || !monthlyPayment || !startDate || !termMonths}
             className="w-full"
           >
-            {saving ? 'Ukladam...' : editLoan ? 'Ulozit zmeny' : 'Pridat pujcku'}
+            {saving ? 'Ukládám...' : editLoan ? 'Uložit změny' : 'Přidat půjčku'}
           </Button>
         </div>
       </DialogContent>

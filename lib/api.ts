@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { Period } from './types'
+import { prisma } from './db'
 
 // ============================================
 // Request Parameter Utilities
@@ -118,6 +119,23 @@ export function validateRequiredFields<T extends Record<string, unknown>>(
   }
 
   return { valid: true }
+}
+
+// ============================================
+// Cache Invalidation
+// ============================================
+
+/**
+ * Invalidate AI insights cache when financial data changes
+ * Call this after any mutation to expenses, income, investments, goals, or loans
+ */
+export async function invalidateInsightsCache(): Promise<void> {
+  try {
+    await prisma.aIInsightsCache.deleteMany({})
+  } catch (error) {
+    // Log but don't fail the main operation if cache invalidation fails
+    console.error('Failed to invalidate AI insights cache:', error)
+  }
 }
 
 // ============================================

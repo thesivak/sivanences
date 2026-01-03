@@ -3,10 +3,11 @@ import { Suspense } from 'react'
 import './globals.css'
 import { SidebarNav } from '@/components/sidebar-nav'
 import { MainLayout } from '@/components/main-layout'
+import { SidebarProvider } from '@/lib/sidebar-context'
 
 export const metadata: Metadata = {
-  title: 'Rodinny rozpocet',
-  description: 'Aplikace pro spravu rodinneho rozpoctu',
+  title: 'Rodinný rozpočet',
+  description: 'Aplikace pro správu rodinného rozpočtu',
 }
 
 export default function RootLayout({
@@ -17,10 +18,12 @@ export default function RootLayout({
   return (
     <html lang="cs">
       <body className="antialiased">
-        <SidebarNav />
-        <Suspense fallback={null}>
-          <MainLayout>{children}</MainLayout>
-        </Suspense>
+        <SidebarProvider>
+          <SidebarNav />
+          <Suspense fallback={null}>
+            <MainLayout>{children}</MainLayout>
+          </Suspense>
+        </SidebarProvider>
       </body>
     </html>
   )
