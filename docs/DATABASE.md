@@ -78,7 +78,22 @@ This document describes the database schema used by the Rodinny Rozpocet applica
 │ budgetIncome    │
 │ budgetExpenses  │
 └─────────────────┘
+
+
+┌───────────────────┐       ┌─────────────────┐       ┌─────────────┐
+│ HouseholdSettings │       │  AIInsightsCache│       │  AIFeedback │
+│───────────────────│       │─────────────────│       │─────────────│
+│ id (PK)           │       │ id (PK)         │       │ id (PK)     │
+│ totalMembers      │       │ overviewInsight │       │ insightType │
+│ dependentChildren │       │ categoryInsights│       │ insightId   │
+│ adults            │       │ generatedAt     │       │ isPositive  │
+│ emergencyFundTarget│      │ dataHash        │       └─────────────┘
+│ emergencyFundMonths│      └─────────────────┘
+│ sidebarExpanded   │
+└───────────────────┘
 ```
+
+**Note:** All models include `createdAt` and `updatedAt` timestamp fields (except AIFeedback which only has `createdAt`).
 
 ---
 
@@ -402,6 +417,81 @@ model ActiveLoan {
 | termMonths | Int | Original term in months |
 
 **Note:** The `calculatedRemaining` field in API responses is computed based on payments made since `startDate`.
+
+---
+
+### HouseholdSettings
+
+Application-wide household configuration.
+
+```prisma
+model HouseholdSettings {
+  id                   String  @id @default("default")
+  totalMembers         Int     @default(1)
+  dependentChildren    Int     @default(0)
+  adults               Int     @default(1)
+  emergencyFundTarget  Int?
+  emergencyFundMonths  Int     @default(3)
+  sidebarExpanded      Boolean @default(false)
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | String | Primary key (always "default") |
+| totalMembers | Int | Total people in household |
+| dependentChildren | Int | Number of dependent children |
+| adults | Int | Number of adults |
+| emergencyFundTarget | Int? | User-defined emergency fund target in CZK |
+| emergencyFundMonths | Int | Months of expenses for emergency fund |
+| sidebarExpanded | Boolean | UI state for sidebar |
+
+---
+
+### AIInsightsCache
+
+Cached AI-generated financial insights for performance.
+
+```prisma
+model AIInsightsCache {
+  id               String   @id @default("default")
+  overviewInsight  String
+  categoryInsights String
+  generatedAt      DateTime
+  dataHash         String
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | String | Primary key (always "default") |
+| overviewInsight | String | Main overview narrative and bullets |
+| categoryInsights | String | JSON: { categoryId: insight } |
+| generatedAt | DateTime | When insights were generated |
+| dataHash | String | Hash of source data for cache invalidation |
+
+---
+
+### AIFeedback
+
+User feedback on AI-generated insights.
+
+```prisma
+model AIFeedback {
+  id          String   @id @default(cuid())
+  insightType String
+  insightId   String?
+  isPositive  Boolean
+  createdAt   DateTime @default(now())
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | String | Primary key (CUID) |
+| insightType | String | "overview", "category", or "suggestion" |
+| insightId | String? | Optional category ID or suggestion identifier |
+| isPositive | Boolean | true = thumbs up, false = thumbs down |
 
 ---
 

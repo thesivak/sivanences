@@ -26,6 +26,7 @@ This application helps families (primarily targeting the household financial dec
 - **Manage Investments** - Track investment contributions with compound interest projections
 - **Analyze Loans** - Calculate loan affordability with stress testing
 - **Set Savings Goals** - Track progress toward financial targets including emergency funds
+- **Get AI Insights** - Receive personalized financial analysis and recommendations (optional, requires OpenAI API key)
 
 ### Key Features
 
