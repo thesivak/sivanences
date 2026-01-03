@@ -30,9 +30,9 @@ export interface InvestmentProjectionResult {
  * Calculate future value of initial principal using compound interest formula
  * FV = P * (1 + r)^n
  *
- * @param initialAmount - Initial principal amount
- * @param monthlyRate - Monthly interest rate (annual rate / 12)
- * @param months - Number of months
+ * @param initialAmount - Initial principal amount (must be >= 0)
+ * @param monthlyRate - Monthly interest rate (annual rate / 12, must be >= 0)
+ * @param months - Number of months (must be >= 0)
  * @returns Future value of the principal
  */
 export function calculatePrincipalFutureValue(
@@ -40,19 +40,24 @@ export function calculatePrincipalFutureValue(
   monthlyRate: number,
   months: number
 ): number {
-  if (months === 0) {
-    return initialAmount
+  // Treat negative inputs as zero
+  const safeInitial = Math.max(0, initialAmount)
+  const safeRate = Math.max(0, monthlyRate)
+  const safeMonths = Math.max(0, months)
+
+  if (safeMonths === 0) {
+    return safeInitial
   }
-  return initialAmount * Math.pow(1 + monthlyRate, months)
+  return safeInitial * Math.pow(1 + safeRate, safeMonths)
 }
 
 /**
  * Calculate future value of monthly contributions (ordinary annuity formula)
  * FV = PMT * ((1 + r)^n - 1) / r
  *
- * @param monthlyContribution - Monthly payment amount
- * @param monthlyRate - Monthly interest rate (annual rate / 12)
- * @param months - Number of months
+ * @param monthlyContribution - Monthly payment amount (must be >= 0)
+ * @param monthlyRate - Monthly interest rate (annual rate / 12, must be >= 0)
+ * @param months - Number of months (must be >= 0)
  * @returns Future value of the annuity
  */
 export function calculateContributionsFutureValue(
@@ -60,29 +65,37 @@ export function calculateContributionsFutureValue(
   monthlyRate: number,
   months: number
 ): number {
-  if (months === 0) {
+  // Treat negative inputs as zero
+  const safeContribution = Math.max(0, monthlyContribution)
+  const safeRate = Math.max(0, monthlyRate)
+  const safeMonths = Math.max(0, months)
+
+  if (safeMonths === 0) {
     return 0
   }
 
-  if (monthlyRate === 0) {
+  if (safeRate === 0) {
     // If no interest, just sum the contributions
-    return monthlyContribution * months
+    return safeContribution * safeMonths
   }
 
-  return monthlyContribution * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate)
+  return safeContribution * ((Math.pow(1 + safeRate, safeMonths) - 1) / safeRate)
 }
 
 /**
  * Calculate investment projection over a specified period
  *
- * @param input - Investment parameters
+ * @param input - Investment parameters (negative values are treated as zero)
  * @returns Projection results including future values and gains
  */
 export function calculateInvestmentProjection(
   input: InvestmentProjectionInput
 ): InvestmentProjectionResult {
-  const monthlyRate = input.annualRate / 12
-  const months = input.years * 12
+  // Treat negative inputs as zero
+  const safeAnnualRate = Math.max(0, input.annualRate)
+  const safeYears = Math.max(0, input.years)
+  const monthlyRate = safeAnnualRate / 12
+  const months = safeYears * 12
 
   const principalFV = calculatePrincipalFutureValue(
     input.initialAmount,
@@ -112,8 +125,10 @@ export function calculateInvestmentProjection(
 /**
  * Generate projection data points for charting
  *
- * @param input - Investment parameters
- * @returns Array of yearly data points with future values
+ * Values are rounded to whole numbers for cleaner chart display.
+ *
+ * @param input - Investment parameters (negative values are treated as zero)
+ * @returns Array of yearly data points with future values (rounded to integers)
  */
 export function generateProjectionData(
   input: InvestmentProjectionInput

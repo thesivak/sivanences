@@ -62,7 +62,9 @@ export async function GET() {
         calculatedBalance: remainingBalance,
         paymentsMade,
         monthsRemaining,
-        paidOffPercent: ((loan.originalAmount - remainingBalance) / loan.originalAmount) * 100,
+        paidOffPercent: loan.originalAmount > 0
+          ? ((loan.originalAmount - remainingBalance) / loan.originalAmount) * 100
+          : 0,
       }
     })
 
