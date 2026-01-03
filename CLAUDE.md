@@ -19,7 +19,7 @@ This file provides context for AI assistants working on this project.
 - **Frontend**: React 19, TypeScript, Tailwind CSS 4, shadcn/ui
 - **Database**: SQLite with Prisma ORM
 - **Testing**: Vitest, React Testing Library
-- **AI** (optional): OpenAI SDK for financial insights
+- **AI** (optional): Claude Code CLI for financial insights (requires local Claude Code installation)
 
 ## Project Structure
 
@@ -113,7 +113,17 @@ formatMonth(2024, 6)      // "Cerven 2024"
 | Variable | Description |
 |----------|-------------|
 | `DATABASE_URL` | SQLite database path (required) |
-| `OPENAI_API_KEY` | OpenAI API key for AI insights (optional) |
+
+### AI Insights (Optional)
+
+AI financial insights are powered by **Claude Code CLI** running locally. No API keys or cloud services required.
+
+**Requirements:**
+- Claude Code CLI installed (`npm install -g @anthropic-ai/claude-code`)
+- Active Claude subscription (Pro/Max)
+- Run `claude login` to authenticate
+
+If Claude Code is not available, the app falls back to rule-based demo insights.
 
 ## Important Notes
 

@@ -1,21 +1,15 @@
 import { prisma } from '@/lib/db'
 import { getPeriodFromRequest, successResponse, errorResponse } from '@/lib/api'
-import OpenAI from 'openai'
-import { zodTextFormat } from 'openai/helpers/zod'
+import { executeClaudeCli, isClaudeCliAvailable } from '@/lib/claude'
 import { z } from 'zod'
 import { createHash } from 'crypto'
 import type { AIInsightsResponse, HealthScore } from '@/lib/types'
 
-// Check if OpenAI API key is configured (support both naming conventions)
-const openaiApiKey = process.env.OPENAI_API_KEY || process.env.OPEN_AI_API
-
-const openai = openaiApiKey ? new OpenAI({ apiKey: openaiApiKey }) : null
-
-// Use gpt-5-mini as the model (fast and cost-effective)
-const AI_MODEL = 'gpt-5-mini-2025-08-07'
+// Check if Claude Code CLI is available on this machine
+const claudeAvailable = isClaudeCliAvailable()
 
 // Define Zod schema for structured outputs
-// Note: OpenAI doesn't support z.record() so we use an array and transform to object
+// We use an array format and transform to object for compatibility
 const SuggestionSchema = z.object({
   id: z.string(),
   text: z.string(),
@@ -479,7 +473,7 @@ ${!data.hasHistoricalData ? '\nPOZNÁMKA: Omezená historická data - zaměř se
 Vrať analýzu jako JSON dle specifikované struktury.`
 }
 
-// Generate demo insights when OpenAI is not configured
+// Generate demo insights when Claude Code CLI is not available
 function generateDemoInsights(data: Awaited<ReturnType<typeof gatherFinancialData>>) {
   const { summary, expensesByCategory, goalsWithProgress, loansSummary, household } = data
 
@@ -645,39 +639,42 @@ export async function GET(request: Request) {
     // Generate data hash for cache validation
     const dataHash = generateDataHash(financialData)
 
-    // Generate new insights with OpenAI or use demo response
+    // Generate new insights with Claude Code CLI or use demo response
     let result: { overview: unknown; categories: unknown }
 
-    if (!openai) {
-      // Generate demo response when OpenAI is not configured
+    if (!claudeAvailable) {
+      // Generate demo response when Claude Code CLI is not available
       result = generateDemoInsights(financialData)
     } else {
-      // Use the new Responses API with Structured Outputs for GPT-5 models
-      const response = await openai.responses.parse({
-        model: AI_MODEL,
-        input: [
-          { role: 'system', content: buildSystemPrompt() },
-          { role: 'user', content: buildUserPrompt(financialData) },
-        ],
-        text: {
-          format: zodTextFormat(AIInsightsSchema, 'ai_insights'),
-        },
+      // Build the full prompt combining system and user prompts
+      const fullPrompt = `${buildSystemPrompt()}\n\n${buildUserPrompt(financialData)}`
+
+      // Execute Claude Code CLI in headless mode
+      const claudeResult = await executeClaudeCli<z.infer<typeof AIInsightsSchema>>({
+        prompt: fullPrompt,
+        outputFormat: 'json',
+        timeout: 120000, // 2 minutes timeout
       })
 
-      // Get the parsed result - responses.parse() auto-validates against schema
-      const parsed = response.output_parsed
-      if (!parsed) {
-        // Check if there was a refusal or error
-        if (response.status === 'incomplete') {
-          throw new Error(`AI response incomplete: ${response.incomplete_details?.reason || 'unknown reason'}`)
-        }
-        throw new Error('No response from OpenAI')
-      }
+      if (!claudeResult.success || !claudeResult.data) {
+        console.error('Claude CLI error:', claudeResult.error)
+        // Fall back to demo insights on error
+        result = generateDemoInsights(financialData)
+      } else {
+        // Validate the response against our schema
+        const parseResult = AIInsightsSchema.safeParse(claudeResult.data)
 
-      // Transform categories array to record format
-      result = {
-        overview: parsed.overview,
-        categories: transformCategoriesToRecord(parsed.categories),
+        if (!parseResult.success) {
+          console.error('Claude CLI response validation failed:', parseResult.error)
+          // Fall back to demo insights on validation error
+          result = generateDemoInsights(financialData)
+        } else {
+          // Transform categories array to record format
+          result = {
+            overview: parseResult.data.overview,
+            categories: transformCategoriesToRecord(parseResult.data.categories),
+          }
+        }
       }
     }
 
