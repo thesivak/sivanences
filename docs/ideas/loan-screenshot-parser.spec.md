@@ -1,0 +1,1 @@
+Allow users to upload screenshots from their banking apps to automatically create loan entries in the system using OpenAI's GPT-5.2 mini vision capabilities.
