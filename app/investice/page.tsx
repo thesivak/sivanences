@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
-import { MonthSelector } from '@/components/month-selector'
+import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageHeader } from '@/components/page-header'
+import { AddItemDialog } from '@/components/add-item-dialog'
+import { TableSkeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,13 +16,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -31,18 +26,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { formatCurrency, formatMonth, getCurrentPeriod, parseCurrencyInput } from '@/lib/format'
+import { useMonthlyData } from '@/lib/hooks'
+import { formatCurrency, parseCurrencyInput } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { Check, X, Pencil, Plus, TrendingUp, Trash2, Calculator } from 'lucide-react'
-import { AiInsightCard } from '@/components/ai-insight-card'
+import { Check, X, Pencil, Trash2, TrendingUp, Calculator } from 'lucide-react'
 import {
   LineChart,
   Line,
@@ -53,94 +40,28 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
+import type { InvestmentsPageData, InvestmentTypeWithAmount } from '@/lib/types'
 
-interface InvestmentTypeData {
-  id: string
-  name: string
-  order: number
-  totalInvested: number | null
-  annualRate: number | null
-  investmentYears: number | null
-  investment: {
-    id: string
-    amount: number
-  } | null
-}
-
-interface InvestmentData {
-  year: number
-  month: number
-  types: InvestmentTypeData[]
-}
-
-interface CompoundDataPoint {
-  year: number
-  [key: string]: number // Dynamic keys for each investment type
-}
-
-// Calculate compound interest with monthly contributions
-function calculateCompoundGrowth(
-  initialAmount: number,
-  monthlyContribution: number,
-  annualRate: number,
-  years: number
-): CompoundDataPoint[] {
-  const data: CompoundDataPoint[] = []
-  const monthlyRate = annualRate / 12
-
-  for (let year = 0; year <= years; year++) {
-    const months = year * 12
-    // Future value of initial principal
-    const principalFV = initialAmount * Math.pow(1 + monthlyRate, months)
-    // Future value of monthly contributions (annuity)
-    const contributionsFV = months > 0
-      ? monthlyContribution * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate)
-      : 0
-    const totalValue = Math.round(principalFV + contributionsFV)
-
-    data.push({
-      year,
-      value: totalValue,
-    })
-  }
-
-  return data
-}
+// Chart colors
+const CHART_COLORS = ['#2563EB', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444', '#06B6D4']
 
 export default function InvestmentsPage() {
-  const [period, setPeriod] = useState(getCurrentPeriod())
-  const [data, setData] = useState<InvestmentData | null>(null)
-  const [loading, setLoading] = useState(true)
+  // Data fetching
+  const { data, loading, period, setPeriod, refetch } = useMonthlyData<InvestmentsPageData>({
+    endpoint: '/api/investments',
+  })
+
+  // Edit state - investments have more fields so we manage them directly
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
-  const [editingNameId, setEditingNameId] = useState<string | null>(null)
-  const [editNameValue, setEditNameValue] = useState('')
-  const [newTypeName, setNewTypeName] = useState('')
-  const [dialogOpen, setDialogOpen] = useState(false)
-
-  // Edit row state (all fields)
   const [editTotalInvested, setEditTotalInvested] = useState('')
   const [editAnnualRate, setEditAnnualRate] = useState('')
   const [editYears, setEditYears] = useState('')
+  const [editingNameId, setEditingNameId] = useState<string | null>(null)
+  const [editNameValue, setEditNameValue] = useState('')
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/investments?year=${period.year}&month=${period.month}`)
-      const json = await res.json()
-      setData(json)
-    } catch (error) {
-      console.error('Failed to fetch investments:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [period])
-
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
-
-  const handleEditStart = (type: InvestmentTypeData) => {
+  // Edit handlers
+  const handleEditStart = (type: InvestmentTypeWithAmount) => {
     setEditingId(type.id)
     setEditValue(type.investment?.amount?.toString() || '')
     setEditTotalInvested(type.totalInvested?.toString() || '')
@@ -182,88 +103,70 @@ export default function InvestmentsPage() {
       await fetch('/api/investments/types', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: typeId,
-          totalInvested,
-          annualRate,
-          investmentYears,
-        }),
+        body: JSON.stringify({ id: typeId, totalInvested, annualRate, investmentYears }),
       })
 
       handleEditCancel()
-      fetchData()
+      refetch()
     } catch (error) {
       console.error('Failed to save investment:', error)
     }
   }
 
-  const handleAddType = async () => {
-    if (!newTypeName.trim()) return
-
-    try {
-      await fetch('/api/investments/types', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newTypeName.trim() }),
-      })
-
-      setNewTypeName('')
-      setDialogOpen(false)
-      fetchData()
-    } catch (error) {
-      console.error('Failed to add type:', error)
-    }
-  }
-
-  const handleDeleteType = async (typeId: string) => {
-    try {
-      await fetch(`/api/investments/types?id=${typeId}`, {
-        method: 'DELETE',
-      })
-      fetchData()
-    } catch (error) {
-      console.error('Failed to delete type:', error)
-    }
-  }
-
-  const handleEditNameStart = (type: InvestmentTypeData) => {
+  // Name editing
+  const handleNameEditStart = (type: InvestmentTypeWithAmount) => {
     setEditingNameId(type.id)
     setEditNameValue(type.name)
   }
 
-  const handleEditNameCancel = () => {
+  const handleNameEditCancel = () => {
     setEditingNameId(null)
     setEditNameValue('')
   }
 
-  const handleEditNameSave = async (typeId: string) => {
+  const handleNameEditSave = async (typeId: string) => {
     if (!editNameValue.trim()) {
-      handleEditNameCancel()
+      handleNameEditCancel()
       return
     }
 
-    try {
-      await fetch('/api/investments/types', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: typeId,
-          name: editNameValue.trim(),
-        }),
-      })
+    await fetch('/api/investments/types', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: typeId, name: editNameValue.trim() }),
+    })
 
-      setEditingNameId(null)
-      setEditNameValue('')
-      fetchData()
-    } catch (error) {
-      console.error('Failed to update type name:', error)
-    }
+    handleNameEditCancel()
+    refetch()
   }
 
-  const totalMonthlyInvestments = data?.types.reduce((sum, t) => sum + (t.investment?.amount || 0), 0) || 0
-  const totalInvested = data?.types.reduce((sum, t) => sum + (t.totalInvested || 0), 0) || 0
+  // Add/Delete handlers
+  const handleAddType = async (name: string) => {
+    await fetch('/api/investments/types', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+    refetch()
+  }
 
-  // Get investments that have all data for projections
+  const handleDeleteType = async (typeId: string) => {
+    await fetch(`/api/investments/types?id=${typeId}`, { method: 'DELETE' })
+    refetch()
+  }
+
+  // Calculations
+  const totalMonthlyInvestments = data?.types.reduce(
+    (sum, t) => sum + (t.investment?.amount || 0),
+    0
+  ) || 0
+
+  const totalInvested = data?.types.reduce(
+    (sum, t) => sum + (t.totalInvested || 0),
+    0
+  ) || 0
+
+  // Investments with projection data
   const investmentsWithProjections = useMemo(() => {
     if (!data) return []
     return data.types.filter(
@@ -271,17 +174,15 @@ export default function InvestmentsPage() {
     )
   }, [data])
 
-  // Calculate combined chart data for all investments
+  // Chart data
   const chartData = useMemo(() => {
     if (investmentsWithProjections.length === 0) return []
 
-    // Find the maximum investment horizon
     const maxYears = Math.max(...investmentsWithProjections.map((t) => t.investmentYears || 0))
+    const result: Array<{ year: number; [key: string]: number }> = []
 
-    // Build chart data with a row per year
-    const data: CompoundDataPoint[] = []
     for (let year = 0; year <= maxYears; year++) {
-      const point: CompoundDataPoint = { year }
+      const point: { year: number; [key: string]: number } = { year }
 
       investmentsWithProjections.forEach((type) => {
         const years = type.investmentYears || 0
@@ -300,36 +201,19 @@ export default function InvestmentsPage() {
         }
       })
 
-      data.push(point)
+      result.push(point)
     }
 
-    return data
+    return result
   }, [investmentsWithProjections])
-
-  // Chart colors - easily distinguishable
-  const chartColors = [
-    '#2563EB', // Blue
-    '#F59E0B', // Amber/Orange
-    '#10B981', // Emerald/Green
-    '#8B5CF6', // Purple
-    '#EF4444', // Red
-    '#06B6D4', // Cyan
-  ]
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Investice</h1>
-          <p className="mt-1 text-muted-foreground">{formatMonth(period.year, period.month)}</p>
-        </div>
-        <MonthSelector
-          year={period.year}
-          month={period.month}
-          onChange={(year, month) => setPeriod({ year, month })}
-        />
-      </div>
+      <PageHeader
+        title="Investice"
+        period={period}
+        onPeriodChange={(year, month) => setPeriod({ year, month })}
+      />
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2">
@@ -370,45 +254,18 @@ export default function InvestmentsPage() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base font-medium">Investice podle typu</CardTitle>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Pridat typ
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Pridat novy typ investice</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="type-name">Nazev typu</Label>
-                    <Input
-                      id="type-name"
-                      value={newTypeName}
-                      onChange={(e) => setNewTypeName(e.target.value)}
-                      placeholder="napr. ETF, Akcie"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleAddType()
-                      }}
-                    />
-                  </div>
-                  <Button onClick={handleAddType} disabled={!newTypeName.trim()}>
-                    Pridat
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <AddItemDialog
+              title="Pridat novy typ investice"
+              buttonLabel="Pridat typ"
+              inputLabel="Nazev typu"
+              inputPlaceholder="napr. ETF, Akcie"
+              onAdd={handleAddType}
+            />
           </div>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-12 animate-pulse rounded bg-muted" />
-              ))}
-            </div>
+            <TableSkeleton rows={3} columns={7} />
           ) : (
             <Table>
               <TableHeader>
@@ -434,15 +291,15 @@ export default function InvestmentsPage() {
                           className="h-8 w-full max-w-[200px]"
                           autoFocus
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleEditNameSave(type.id)
-                            if (e.key === 'Escape') handleEditNameCancel()
+                            if (e.key === 'Enter') handleNameEditSave(type.id)
+                            if (e.key === 'Escape') handleNameEditCancel()
                           }}
-                          onBlur={() => handleEditNameSave(type.id)}
+                          onBlur={() => handleNameEditSave(type.id)}
                         />
                       ) : (
                         <span
                           className="cursor-pointer hover:text-primary"
-                          onClick={() => handleEditNameStart(type)}
+                          onClick={() => handleNameEditStart(type)}
                         >
                           {type.name}
                         </span>
@@ -540,40 +397,21 @@ export default function InvestmentsPage() {
                     <TableCell>
                       {editingId === type.id ? (
                         <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleEditSave(type.id)}
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditSave(type.id)}>
                             <Check className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={handleEditCancel}
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleEditCancel}>
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
                       ) : (
                         <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleEditStart(type)}
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditStart(type)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                              >
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </AlertDialogTrigger>
@@ -581,15 +419,12 @@ export default function InvestmentsPage() {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Smazat typ investice?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Opravdu chcete smazat typ &quot;{type.name}&quot;? Tato akce smaze i vsechny zaznamy investic tohoto typu a nelze ji vzit zpet.
+                                  Opravdu chcete smazat typ &quot;{type.name}&quot;? Tato akce smaze i vsechny zaznamy investic tohoto typu.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Zrusit</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteType(type.id)}
-                                  className="bg-destructive text-white hover:bg-destructive/90"
-                                >
+                                <AlertDialogAction onClick={() => handleDeleteType(type.id)} className="bg-destructive text-white hover:bg-destructive/90">
                                   Smazat
                                 </AlertDialogAction>
                               </AlertDialogFooter>
@@ -606,7 +441,7 @@ export default function InvestmentsPage() {
         </CardContent>
       </Card>
 
-      {/* Investment Projections */}
+      {/* Investment Projections Chart */}
       {investmentsWithProjections.length > 0 && (
         <Card className="opacity-0 animate-fade-in stagger-3">
           <CardHeader>
@@ -620,29 +455,16 @@ export default function InvestmentsPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E3DC" />
-                  <XAxis
-                    dataKey="year"
-                    tickFormatter={(v) => `${v}. rok`}
-                    stroke="#6B6B6B"
-                    fontSize={12}
-                  />
+                  <XAxis dataKey="year" tickFormatter={(v) => `${v}. rok`} stroke="#6B6B6B" fontSize={12} />
                   <YAxis
-                    tickFormatter={(v) => {
-                      if (v >= 1000000) return `${(v / 1000000).toFixed(1)}M`
-                      if (v >= 1000) return `${(v / 1000).toFixed(0)}k`
-                      return v.toString()
-                    }}
+                    tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v.toString()}
                     stroke="#6B6B6B"
                     fontSize={12}
                   />
                   <Tooltip
                     formatter={(value) => [formatCurrency(Number(value) || 0, false), '']}
                     labelFormatter={(label) => `${label}. rok`}
-                    contentStyle={{
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #E5E3DC',
-                      borderRadius: '4px',
-                    }}
+                    contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E3DC', borderRadius: '4px' }}
                   />
                   <Legend />
                   {investmentsWithProjections.map((type, index) => (
@@ -651,9 +473,9 @@ export default function InvestmentsPage() {
                       type="monotone"
                       dataKey={type.name}
                       name={type.name}
-                      stroke={chartColors[index % chartColors.length]}
+                      stroke={CHART_COLORS[index % CHART_COLORS.length]}
                       strokeWidth={2}
-                      dot={{ fill: chartColors[index % chartColors.length], strokeWidth: 0, r: 3 }}
+                      dot={{ fill: CHART_COLORS[index % CHART_COLORS.length], strokeWidth: 0, r: 3 }}
                       activeDot={{ r: 5 }}
                     />
                   ))}
@@ -674,27 +496,21 @@ export default function InvestmentsPage() {
                   <div
                     key={type.id}
                     className="rounded-lg border p-4"
-                    style={{ borderLeftColor: chartColors[index % chartColors.length], borderLeftWidth: 4 }}
+                    style={{ borderLeftColor: CHART_COLORS[index % CHART_COLORS.length], borderLeftWidth: 4 }}
                   >
                     <div className="font-medium">{type.name}</div>
                     <div className="mt-2 space-y-1 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Konecna hodnota:</span>
-                        <span className="font-mono-numbers font-semibold text-[#1B5E20]">
-                          {formatCurrency(finalValue, false)}
-                        </span>
+                        <span className="font-mono-numbers font-semibold text-[#1B5E20]">{formatCurrency(finalValue, false)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Celkovy vklad:</span>
-                        <span className="font-mono-numbers">
-                          {formatCurrency(totalContributions, false)}
-                        </span>
+                        <span className="font-mono-numbers">{formatCurrency(totalContributions, false)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Zisk z uroku:</span>
-                        <span className="font-mono-numbers text-[#1B5E20]">
-                          +{formatCurrency(totalGain, false)}
-                        </span>
+                        <span className="font-mono-numbers text-[#1B5E20]">+{formatCurrency(totalGain, false)}</span>
                       </div>
                     </div>
                   </div>
@@ -719,14 +535,6 @@ export default function InvestmentsPage() {
           </CardContent>
         </Card>
       )}
-
-      {/* AI Insights */}
-      <AiInsightCard
-        section="investments"
-        year={period.year}
-        month={period.month}
-        className="stagger-4"
-      />
     </div>
   )
 }

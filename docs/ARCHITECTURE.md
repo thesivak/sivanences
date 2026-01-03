@@ -27,16 +27,15 @@ This document describes the technical architecture, technology stack, and projec
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │ /api/summary    /api/expenses    /api/income             │   │
 │  │ /api/goals      /api/loans       /api/investments        │   │
-│  │ /api/ai-insights                 /api/export             │   │
 │  └──────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
-              │                                    │
-              │ Prisma ORM                         │ OpenAI API
-              ▼                                    ▼
-┌─────────────────────────┐          ┌─────────────────────────┐
-│    SQLite Database      │          │     OpenAI GPT-5        │
-│    (prisma/dev.db)      │          │     (AI Insights)       │
-└─────────────────────────┘          └─────────────────────────┘
+              │
+              │ Prisma ORM
+              ▼
+┌─────────────────────────┐
+│    SQLite Database      │
+│    (prisma/dev.db)      │
+└─────────────────────────┘
 ```
 
 ---
@@ -62,7 +61,6 @@ This document describes the technical architecture, technology stack, and projec
 | Next.js API Routes | 16.x | Backend API endpoints |
 | Prisma | 5.22.0 | Database ORM |
 | better-sqlite3 | 12.5.0 | SQLite driver |
-| OpenAI SDK | 6.15.0 | AI integration |
 
 ### Database
 
@@ -89,9 +87,6 @@ sivanences/
 │
 ├── app/                          # Next.js App Router
 │   ├── api/                      # API Routes (Backend)
-│   │   ├── ai-insights/          # AI insight generation
-│   │   │   ├── route.ts          # Main insights endpoint
-│   │   │   └── executive-summary/
 │   │   ├── expenses/             # Expense CRUD
 │   │   │   ├── route.ts          # Expense amounts
 │   │   │   └── categories/       # Category management
@@ -133,7 +128,6 @@ sivanences/
 │   ├── sidebar-nav.tsx           # Navigation sidebar
 │   ├── month-selector.tsx        # Period selection
 │   ├── stat-card.tsx             # Statistics display
-│   ├── ai-insight-card.tsx       # AI insights component
 │   ├── loan-compare-view.tsx     # Loan comparison
 │   └── ...
 │
@@ -141,7 +135,6 @@ sivanences/
 │   ├── db.ts                     # Prisma client singleton
 │   ├── format.ts                 # Czech formatting utilities
 │   ├── loan.ts                   # Loan calculations
-│   ├── ai-prompts.ts             # AI prompt builders
 │   ├── types.ts                  # Shared TypeScript types
 │   ├── utils.ts                  # General utilities
 │   └── generated/prisma/         # Generated Prisma client
@@ -230,53 +223,6 @@ User Edits Value
 └─────────────────┘
 ```
 
-### 3. AI Insight Generation
-
-```
-Page Loads / User Clicks Refresh
-       │
-       ▼
-┌─────────────────┐
-│ AiInsightCard   │
-└────────┬────────┘
-         │ GET /api/ai-insights (check cache)
-         ▼
-┌─────────────────┐     ┌─────────────────┐
-│ Cached Insight? │────►│ Return Cached   │
-│ (< 1 hour)      │ Yes │ Show immediately│
-└────────┬────────┘     └─────────────────┘
-         │ No (or force refresh)
-         ▼
-┌─────────────────┐
-│ POST /api/      │
-│ ai-insights     │
-└────────┬────────┘
-         │ Build context from DB
-         ▼
-┌─────────────────┐
-│ buildPrompt()   │
-│ (lib/ai-prompts)│
-└────────┬────────┘
-         │ Send to OpenAI
-         ▼
-┌─────────────────┐
-│ OpenAI GPT-5    │
-│ Generate insight│
-└────────┬────────┘
-         │ Parse JSON response
-         ▼
-┌─────────────────┐
-│ Cache in DB     │
-│ (CachedInsight) │
-└────────┬────────┘
-         │ Return to client
-         ▼
-┌─────────────────┐
-│ UI Animates     │
-│ New Insight     │
-└─────────────────┘
-```
-
 ---
 
 ## Key Design Decisions
@@ -301,25 +247,12 @@ Page Loads / User Clicks Refresh
 - File-based routing
 - Optimized for performance
 
-### 3. AI Insight Caching
-
-**Strategy:**
-- Database cache (persistent across restarts)
-- In-memory cache (1-hour TTL for fast access)
-- Background regeneration (stale-while-revalidate pattern)
-
-**Why?**
-- Reduce OpenAI API costs
-- Faster user experience
-- Insights don't change frequently within a month
-
-### 4. Czech-First Design
+### 3. Czech-First Design
 
 **Approach:**
 - All UI text in Czech
 - Currency formatting (CZK with proper separators)
 - Date formatting (Czech standard)
-- AI prompts in Czech (without diacritics for reliability)
 
 ---
 
@@ -327,7 +260,6 @@ Page Loads / User Clicks Refresh
 
 | Area | Implementation |
 |------|----------------|
-| API Keys | Stored in `.env` (git-ignored) |
 | Database | Local SQLite (no network exposure) |
 | Authentication | None (local/family use) |
 | Input Validation | Basic validation via Prisma types |
@@ -339,9 +271,8 @@ Page Loads / User Clicks Refresh
 
 1. **Prisma Client Singleton** - Reuses database connection
 2. **React Hooks** - `useMemo`, `useCallback` for expensive computations
-3. **Background Prefetching** - InsightsPrefetcher component
-4. **Efficient Queries** - Indexed database columns
-5. **Client-Side Caching** - State management for fetched data
+3. **Efficient Queries** - Indexed database columns
+4. **Client-Side Caching** - State management for fetched data
 
 ---
 
@@ -360,9 +291,3 @@ Page Loads / User Clicks Refresh
 1. Create in `components/`
 2. Follow existing patterns (TypeScript, Tailwind)
 3. Import and use in pages
-
-### Adding New AI Section
-1. Add section type to `lib/ai-prompts.ts`
-2. Create prompt builder function
-3. Update API route to handle section
-4. Create UI component to display insights

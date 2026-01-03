@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { MonthSelector } from '@/components/month-selector'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageHeader } from '@/components/page-header'
+import { AddItemDialog } from '@/components/add-item-dialog'
+import { TableSkeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,13 +15,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -31,75 +25,38 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Label } from '@/components/ui/label'
-import { formatCurrency, formatMonth, getCurrentPeriod, parseCurrencyInput } from '@/lib/format'
+import { useMonthlyData } from '@/lib/hooks'
+import { useDoubleInlineEdit } from '@/lib/hooks/use-inline-edit'
+import { formatCurrency, parseCurrencyInput } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { Check, X, Pencil, Trash2, Plus } from 'lucide-react'
-import { AiInsightCard } from '@/components/ai-insight-card'
-
-interface CategoryExpense {
-  id: string
-  name: string
-  icon: string | null
-  order: number
-  expense: {
-    id: string
-    amount: number
-  } | null
-}
-
-interface ExpensesData {
-  year: number
-  month: number
-  categories: CategoryExpense[]
-}
+import { Check, X, Pencil, Trash2 } from 'lucide-react'
+import type { ExpensesPageData, CategoryWithExpense } from '@/lib/types'
 
 export default function ExpensesPage() {
-  const [period, setPeriod] = useState(getCurrentPeriod())
-  const [data, setData] = useState<ExpensesData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editValue, setEditValue] = useState('')
-  const [editingNameId, setEditingNameId] = useState<string | null>(null)
-  const [editNameValue, setEditNameValue] = useState('')
-  const [newCategoryName, setNewCategoryName] = useState('')
-  const [dialogOpen, setDialogOpen] = useState(false)
+  // Data fetching with period management
+  const { data, loading, period, setPeriod, refetch } = useMonthlyData<ExpensesPageData>({
+    endpoint: '/api/expenses',
+  })
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/expenses?year=${period.year}&month=${period.month}`)
-      const json = await res.json()
-      setData(json)
-    } catch (error) {
-      console.error('Failed to fetch expenses:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [period])
+  // Inline editing state
+  const {
+    editingId,
+    editValue,
+    startEdit,
+    cancelEdit,
+    saveEdit,
+    setEditValue,
+    editingNameId,
+    editNameValue,
+    startNameEdit,
+    cancelNameEdit,
+    saveNameEdit,
+    setEditNameValue,
+  } = useDoubleInlineEdit({
+    onSaveValue: async (categoryId, value) => {
+      const amount = parseCurrencyInput(value)
+      if (amount === null) return
 
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
-
-  const handleEditStart = (cat: CategoryExpense) => {
-    setEditingId(cat.id)
-    setEditValue(cat.expense?.amount?.toString() || '')
-  }
-
-  const handleEditCancel = () => {
-    setEditingId(null)
-    setEditValue('')
-  }
-
-  const handleEditSave = async (categoryId: string) => {
-    const amount = parseCurrencyInput(editValue)
-    if (amount === null) {
-      handleEditCancel()
-      return
-    }
-
-    try {
       await fetch('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -110,96 +67,55 @@ export default function ExpensesPage() {
           amount,
         }),
       })
-
-      setEditingId(null)
-      setEditValue('')
-      fetchData()
-    } catch (error) {
-      console.error('Failed to save expense:', error)
-    }
-  }
-
-  const handleDeleteCategory = async (categoryId: string) => {
-    try {
-      await fetch(`/api/expenses/categories?id=${categoryId}`, {
-        method: 'DELETE',
-      })
-      fetchData()
-    } catch (error) {
-      console.error('Failed to delete category:', error)
-    }
-  }
-
-  const handleEditNameStart = (cat: CategoryExpense) => {
-    setEditingNameId(cat.id)
-    setEditNameValue(cat.name)
-  }
-
-  const handleEditNameCancel = () => {
-    setEditingNameId(null)
-    setEditNameValue('')
-  }
-
-  const handleEditNameSave = async (categoryId: string) => {
-    if (!editNameValue.trim()) {
-      handleEditNameCancel()
-      return
-    }
-
-    try {
+    },
+    onSaveName: async (categoryId, name) => {
       await fetch('/api/expenses/categories', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: categoryId,
-          name: editNameValue.trim(),
-        }),
+        body: JSON.stringify({ id: categoryId, name }),
       })
+    },
+    onSaveSuccess: refetch,
+  })
 
-      setEditingNameId(null)
-      setEditNameValue('')
-      fetchData()
-    } catch (error) {
-      console.error('Failed to update category name:', error)
-    }
+  // Handlers
+  const handleAddCategory = async (name: string) => {
+    await fetch('/api/expenses/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+    refetch()
   }
 
-  const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) return
-
-    try {
-      await fetch('/api/expenses/categories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newCategoryName.trim() }),
-      })
-
-      setNewCategoryName('')
-      setDialogOpen(false)
-      fetchData()
-    } catch (error) {
-      console.error('Failed to add category:', error)
-    }
+  const handleDeleteCategory = async (categoryId: string) => {
+    await fetch(`/api/expenses/categories?id=${categoryId}`, {
+      method: 'DELETE',
+    })
+    refetch()
   }
 
-  const totalExpenses = data?.categories.reduce((sum, cat) => sum + (cat.expense?.amount || 0), 0) || 0
+  const handleEditStart = (cat: CategoryWithExpense) => {
+    startEdit(cat.id, cat.expense?.amount)
+  }
+
+  const handleNameEditStart = (cat: CategoryWithExpense) => {
+    startNameEdit(cat.id, cat.name)
+  }
+
+  const totalExpenses = data?.categories.reduce(
+    (sum, cat) => sum + (cat.expense?.amount || 0),
+    0
+  ) || 0
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Vydaje</h1>
-          <p className="mt-1 text-muted-foreground">{formatMonth(period.year, period.month)}</p>
-        </div>
-        <MonthSelector
-          year={period.year}
-          month={period.month}
-          onChange={(year, month) => setPeriod({ year, month })}
-        />
-      </div>
+      <PageHeader
+        title="Vydaje"
+        period={period}
+        onPeriodChange={(year, month) => setPeriod({ year, month })}
+      />
 
-      {/* Expenses Table */}
       <Card className="opacity-0 animate-fade-in stagger-2">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -208,46 +124,19 @@ export default function ExpensesPage() {
               <div className="font-mono-numbers text-lg font-semibold">
                 Celkem: {formatCurrency(totalExpenses, false)}
               </div>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Pridat kategorii
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Pridat novou kategorii</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 pt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="category-name">Nazev kategorie</Label>
-                      <Input
-                        id="category-name"
-                        value={newCategoryName}
-                        onChange={(e) => setNewCategoryName(e.target.value)}
-                        placeholder="napr. Dovolena"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleAddCategory()
-                        }}
-                      />
-                    </div>
-                    <Button onClick={handleAddCategory} disabled={!newCategoryName.trim()}>
-                      Pridat
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <AddItemDialog
+                title="Pridat novou kategorii"
+                buttonLabel="Pridat kategorii"
+                inputLabel="Nazev kategorie"
+                inputPlaceholder="napr. Dovolena"
+                onAdd={handleAddCategory}
+              />
             </div>
           </div>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="space-y-2">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-12 animate-pulse rounded bg-muted" />
-              ))}
-            </div>
+            <TableSkeleton rows={5} columns={4} />
           ) : (
             <Table>
               <TableHeader>
@@ -270,15 +159,15 @@ export default function ExpensesPage() {
                           className="h-8 w-full max-w-[200px]"
                           autoFocus
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleEditNameSave(cat.id)
-                            if (e.key === 'Escape') handleEditNameCancel()
+                            if (e.key === 'Enter') saveNameEdit(cat.id)
+                            if (e.key === 'Escape') cancelNameEdit()
                           }}
-                          onBlur={() => handleEditNameSave(cat.id)}
+                          onBlur={() => saveNameEdit(cat.id)}
                         />
                       ) : (
                         <span
                           className="cursor-pointer hover:text-primary"
-                          onClick={() => handleEditNameStart(cat)}
+                          onClick={() => handleNameEditStart(cat)}
                         >
                           {cat.name}
                         </span>
@@ -292,8 +181,8 @@ export default function ExpensesPage() {
                           className="h-8 w-32 text-right font-mono-numbers ml-auto"
                           autoFocus
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleEditSave(cat.id)
-                            if (e.key === 'Escape') handleEditCancel()
+                            if (e.key === 'Enter') saveEdit(cat.id)
+                            if (e.key === 'Escape') cancelEdit()
                           }}
                         />
                       ) : (
@@ -316,7 +205,7 @@ export default function ExpensesPage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => handleEditSave(cat.id)}
+                            onClick={() => saveEdit(cat.id)}
                           >
                             <Check className="h-4 w-4" />
                           </Button>
@@ -324,7 +213,7 @@ export default function ExpensesPage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={handleEditCancel}
+                            onClick={cancelEdit}
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -353,7 +242,8 @@ export default function ExpensesPage() {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Smazat kategorii?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Opravdu chcete smazat kategorii &quot;{cat.name}&quot;? Tato akce smaze i vsechny zaznamy vydaju v teto kategorii a nelze ji vzit zpet.
+                                  Opravdu chcete smazat kategorii &quot;{cat.name}&quot;? Tato akce
+                                  smaze i vsechny zaznamy vydaju v teto kategorii a nelze ji vzit zpet.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
@@ -377,14 +267,6 @@ export default function ExpensesPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* AI Insights */}
-      <AiInsightCard
-        section="expenses"
-        year={period.year}
-        month={period.month}
-        className="stagger-3"
-      />
     </div>
   )
 }

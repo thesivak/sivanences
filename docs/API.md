@@ -528,71 +528,6 @@ Array<{
 
 ---
 
-## AI Insights
-
-### GET /api/ai-insights
-
-Retrieve cached AI insight for a section.
-
-**Query Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| section | string | Yes | Section name |
-| year | number | Yes | Year |
-| month | number | Yes | Month |
-
-**Section Values:**
-- `dashboard`
-- `expenses`
-- `income`
-- `investments`
-- `goals`
-- `loans`
-
-**Response:**
-```typescript
-{
-  section: string
-  insights: {
-    summary: string
-    patterns: string[]
-    recommendations: string[]
-    healthScore: number
-    healthLabel: string
-  }
-  generatedAt: string
-  cached: boolean
-}
-```
-
-### POST /api/ai-insights
-
-Generate or refresh AI insight.
-
-**Request Body:**
-```typescript
-{
-  section: string
-  year: number
-  month: number
-  forceRefresh?: boolean  // Bypass cache
-}
-```
-
-**Response:** Same as GET response
-
-### GET /api/ai-insights/executive-summary
-
-Get consolidated executive summary across all sections.
-
-**Query Parameters:**
-| Parameter | Type | Required |
-|-----------|------|----------|
-| year | number | Yes |
-| month | number | Yes |
-
----
-
 ## Error Handling
 
 All endpoints return appropriate HTTP status codes:
@@ -645,19 +580,4 @@ await fetch('/api/goals/goal123/transaction', {
     description: 'Monthly deposit'
   })
 })
-```
-
-### Generate AI Insight
-```javascript
-const response = await fetch('/api/ai-insights', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    section: 'expenses',
-    year: 2024,
-    month: 6,
-    forceRefresh: true
-  })
-})
-const insight = await response.json()
 ```

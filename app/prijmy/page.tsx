@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { MonthSelector } from '@/components/month-selector'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageHeader } from '@/components/page-header'
+import { AddItemDialog } from '@/components/add-item-dialog'
+import { TableSkeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,13 +15,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -31,74 +25,38 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Label } from '@/components/ui/label'
-import { formatCurrency, formatMonth, getCurrentPeriod, parseCurrencyInput } from '@/lib/format'
+import { useMonthlyData } from '@/lib/hooks'
+import { useDoubleInlineEdit } from '@/lib/hooks/use-inline-edit'
+import { formatCurrency, parseCurrencyInput } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { Check, X, Pencil, Plus, TrendingUp, Trash2 } from 'lucide-react'
-import { AiInsightCard } from '@/components/ai-insight-card'
-
-interface IncomeSourceData {
-  id: string
-  name: string
-  order: number
-  income: {
-    id: string
-    amount: number
-  } | null
-}
-
-interface IncomeData {
-  year: number
-  month: number
-  sources: IncomeSourceData[]
-}
+import { Check, X, Pencil, Trash2, TrendingUp } from 'lucide-react'
+import type { IncomePageData, IncomeSourceWithAmount } from '@/lib/types'
 
 export default function IncomePage() {
-  const [period, setPeriod] = useState(getCurrentPeriod())
-  const [data, setData] = useState<IncomeData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editValue, setEditValue] = useState('')
-  const [editingNameId, setEditingNameId] = useState<string | null>(null)
-  const [editNameValue, setEditNameValue] = useState('')
-  const [newSourceName, setNewSourceName] = useState('')
-  const [dialogOpen, setDialogOpen] = useState(false)
+  // Data fetching with period management
+  const { data, loading, period, setPeriod, refetch } = useMonthlyData<IncomePageData>({
+    endpoint: '/api/income',
+  })
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/income?year=${period.year}&month=${period.month}`)
-      const json = await res.json()
-      setData(json)
-    } catch (error) {
-      console.error('Failed to fetch income:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [period])
+  // Inline editing state
+  const {
+    editingId,
+    editValue,
+    startEdit,
+    cancelEdit,
+    saveEdit,
+    setEditValue,
+    editingNameId,
+    editNameValue,
+    startNameEdit,
+    cancelNameEdit,
+    saveNameEdit,
+    setEditNameValue,
+  } = useDoubleInlineEdit({
+    onSaveValue: async (sourceId, value) => {
+      const amount = parseCurrencyInput(value)
+      if (amount === null) return
 
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
-
-  const handleEditStart = (source: IncomeSourceData) => {
-    setEditingId(source.id)
-    setEditValue(source.income?.amount?.toString() || '')
-  }
-
-  const handleEditCancel = () => {
-    setEditingId(null)
-    setEditValue('')
-  }
-
-  const handleEditSave = async (sourceId: string) => {
-    const amount = parseCurrencyInput(editValue)
-    if (amount === null) {
-      handleEditCancel()
-      return
-    }
-
-    try {
       await fetch('/api/income', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -109,94 +67,54 @@ export default function IncomePage() {
           amount,
         }),
       })
-
-      setEditingId(null)
-      setEditValue('')
-      fetchData()
-    } catch (error) {
-      console.error('Failed to save income:', error)
-    }
-  }
-
-  const handleAddSource = async () => {
-    if (!newSourceName.trim()) return
-
-    try {
-      await fetch('/api/income/sources', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newSourceName.trim() }),
-      })
-
-      setNewSourceName('')
-      setDialogOpen(false)
-      fetchData()
-    } catch (error) {
-      console.error('Failed to add source:', error)
-    }
-  }
-
-  const handleDeleteSource = async (sourceId: string) => {
-    try {
-      await fetch(`/api/income/sources?id=${sourceId}`, {
-        method: 'DELETE',
-      })
-      fetchData()
-    } catch (error) {
-      console.error('Failed to delete source:', error)
-    }
-  }
-
-  const handleEditNameStart = (source: IncomeSourceData) => {
-    setEditingNameId(source.id)
-    setEditNameValue(source.name)
-  }
-
-  const handleEditNameCancel = () => {
-    setEditingNameId(null)
-    setEditNameValue('')
-  }
-
-  const handleEditNameSave = async (sourceId: string) => {
-    if (!editNameValue.trim()) {
-      handleEditNameCancel()
-      return
-    }
-
-    try {
+    },
+    onSaveName: async (sourceId, name) => {
       await fetch('/api/income/sources', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: sourceId,
-          name: editNameValue.trim(),
-        }),
+        body: JSON.stringify({ id: sourceId, name }),
       })
+    },
+    onSaveSuccess: refetch,
+  })
 
-      setEditingNameId(null)
-      setEditNameValue('')
-      fetchData()
-    } catch (error) {
-      console.error('Failed to update source name:', error)
-    }
+  // Handlers
+  const handleAddSource = async (name: string) => {
+    await fetch('/api/income/sources', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+    refetch()
   }
 
-  const totalIncome = data?.sources.reduce((sum, src) => sum + (src.income?.amount || 0), 0) || 0
+  const handleDeleteSource = async (sourceId: string) => {
+    await fetch(`/api/income/sources?id=${sourceId}`, {
+      method: 'DELETE',
+    })
+    refetch()
+  }
+
+  const handleEditStart = (source: IncomeSourceWithAmount) => {
+    startEdit(source.id, source.income?.amount)
+  }
+
+  const handleNameEditStart = (source: IncomeSourceWithAmount) => {
+    startNameEdit(source.id, source.name)
+  }
+
+  const totalIncome = data?.sources.reduce(
+    (sum, src) => sum + (src.income?.amount || 0),
+    0
+  ) || 0
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Prijmy</h1>
-          <p className="mt-1 text-muted-foreground">{formatMonth(period.year, period.month)}</p>
-        </div>
-        <MonthSelector
-          year={period.year}
-          month={period.month}
-          onChange={(year, month) => setPeriod({ year, month })}
-        />
-      </div>
+      <PageHeader
+        title="Prijmy"
+        period={period}
+        onPeriodChange={(year, month) => setPeriod({ year, month })}
+      />
 
       {/* Total Income Card */}
       <Card className="opacity-0 animate-fade-in">
@@ -222,45 +140,18 @@ export default function IncomePage() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base font-medium">Prijmy podle zdroje</CardTitle>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Pridat zdroj
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Pridat novy zdroj prijmu</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="source-name">Nazev zdroje</Label>
-                    <Input
-                      id="source-name"
-                      value={newSourceName}
-                      onChange={(e) => setNewSourceName(e.target.value)}
-                      placeholder="napr. Vedlejsi prijem"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleAddSource()
-                      }}
-                    />
-                  </div>
-                  <Button onClick={handleAddSource} disabled={!newSourceName.trim()}>
-                    Pridat
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <AddItemDialog
+              title="Pridat novy zdroj prijmu"
+              buttonLabel="Pridat zdroj"
+              inputLabel="Nazev zdroje"
+              inputPlaceholder="napr. Vedlejsi prijem"
+              onAdd={handleAddSource}
+            />
           </div>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-12 animate-pulse rounded bg-muted" />
-              ))}
-            </div>
+            <TableSkeleton rows={3} columns={4} />
           ) : (
             <Table>
               <TableHeader>
@@ -283,15 +174,15 @@ export default function IncomePage() {
                           className="h-8 w-full max-w-[200px]"
                           autoFocus
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleEditNameSave(source.id)
-                            if (e.key === 'Escape') handleEditNameCancel()
+                            if (e.key === 'Enter') saveNameEdit(source.id)
+                            if (e.key === 'Escape') cancelNameEdit()
                           }}
-                          onBlur={() => handleEditNameSave(source.id)}
+                          onBlur={() => saveNameEdit(source.id)}
                         />
                       ) : (
                         <span
                           className="cursor-pointer hover:text-primary"
-                          onClick={() => handleEditNameStart(source)}
+                          onClick={() => handleNameEditStart(source)}
                         >
                           {source.name}
                         </span>
@@ -305,8 +196,8 @@ export default function IncomePage() {
                           className="h-8 w-32 text-right font-mono-numbers ml-auto"
                           autoFocus
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleEditSave(source.id)
-                            if (e.key === 'Escape') handleEditCancel()
+                            if (e.key === 'Enter') saveEdit(source.id)
+                            if (e.key === 'Escape') cancelEdit()
                           }}
                         />
                       ) : (
@@ -329,7 +220,7 @@ export default function IncomePage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => handleEditSave(source.id)}
+                            onClick={() => saveEdit(source.id)}
                           >
                             <Check className="h-4 w-4" />
                           </Button>
@@ -337,7 +228,7 @@ export default function IncomePage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={handleEditCancel}
+                            onClick={cancelEdit}
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -366,7 +257,8 @@ export default function IncomePage() {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Smazat zdroj prijmu?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Opravdu chcete smazat zdroj &quot;{source.name}&quot;? Tato akce smaze i vsechny zaznamy prijmu z tohoto zdroje a nelze ji vzit zpet.
+                                  Opravdu chcete smazat zdroj &quot;{source.name}&quot;? Tato akce
+                                  smaze i vsechny zaznamy prijmu z tohoto zdroje a nelze ji vzit zpet.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
@@ -390,14 +282,6 @@ export default function IncomePage() {
           )}
         </CardContent>
       </Card>
-
-      {/* AI Insights */}
-      <AiInsightCard
-        section="income"
-        year={period.year}
-        month={period.month}
-        className="stagger-3"
-      />
     </div>
   )
 }

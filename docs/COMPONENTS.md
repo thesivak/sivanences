@@ -26,7 +26,6 @@ components/
 ├── sidebar-nav.tsx        # Navigation sidebar
 ├── month-selector.tsx     # Period selection
 ├── stat-card.tsx          # Statistics display
-├── ai-insight-card.tsx    # AI insights display
 ├── income-breakdown.tsx   # Income chart
 ├── loan-compare-view.tsx  # Loan comparison
 ├── active-loans-table.tsx # Active loans table
@@ -328,45 +327,6 @@ import { StatCard } from '@/components/stat-card'
 
 ---
 
-### AiInsightCard
-
-AI-generated insights display.
-
-```tsx
-import { AiInsightCard } from '@/components/ai-insight-card'
-
-<AiInsightCard
-  section="expenses"
-  year={2024}
-  month={6}
-/>
-```
-
-**Props:**
-| Prop | Type | Description |
-|------|------|-------------|
-| section | string | Insight section name |
-| year | number | Year |
-| month | number | Month |
-
-**Features:**
-- Automatic insight fetching
-- Cache-aware (shows cached then refreshes)
-- Health score visualization
-- Patterns and recommendations lists
-- Refresh button
-- Loading and error states
-
-**Sections:**
-- `dashboard` - Overall financial health
-- `expenses` - Spending analysis
-- `income` - Income analysis
-- `investments` - Investment analysis
-- `goals` - Savings goals analysis
-- `loans` - Loan analysis
-
----
-
 ### IncomeBreakdown
 
 Income sources visualization.
@@ -509,56 +469,6 @@ import { LoanHistorySidebar } from '@/components/loan-history-sidebar'
 | onSelect | (scenario) => void | Selection handler |
 | onDelete | (id) => void | Delete handler |
 | onCompare | (s1, s2) => void | Compare handler |
-
----
-
-### ExecutiveSummaryCard
-
-Dashboard executive summary.
-
-```tsx
-import { ExecutiveSummaryCard } from '@/components/executive-summary-card'
-
-<ExecutiveSummaryCard
-  year={2024}
-  month={6}
-/>
-```
-
-**Features:**
-- Consolidated health score
-- Key financial highlights
-- Quick recommendations
-- Links to detailed sections
-
----
-
-### InsightsPrefetcher
-
-Background insight loading component.
-
-```tsx
-import { InsightsPrefetcher } from '@/components/insights-prefetcher'
-
-// Place in layout or page
-<InsightsPrefetcher
-  sections={['dashboard', 'expenses', 'income']}
-  year={2024}
-  month={6}
-/>
-```
-
-**Props:**
-| Prop | Type | Description |
-|------|------|-------------|
-| sections | string[] | Sections to prefetch |
-| year | number | Year |
-| month | number | Month |
-
-**Behavior:**
-- Silently prefetches insights in background
-- Does not render any visible content
-- Improves perceived performance
 
 ---
 

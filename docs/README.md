@@ -2,7 +2,7 @@
 
 **Family Budget Management Application**
 
-A comprehensive financial management tool designed for Czech families to track expenses, income, investments, loans, and savings goals with AI-powered insights.
+A comprehensive financial management tool designed for Czech families to track expenses, income, investments, loans, and savings goals.
 
 ## Quick Navigation
 
@@ -12,7 +12,6 @@ A comprehensive financial management tool designed for Czech families to track e
 | [API Reference](./API.md) | Complete API endpoint documentation |
 | [Database Schema](./DATABASE.md) | Prisma models and data relationships |
 | [Components](./COMPONENTS.md) | React component library reference |
-| [AI Integration](./AI-INTEGRATION.md) | OpenAI integration and insight generation |
 | [Development Guide](./DEVELOPMENT.md) | Setup, commands, and contribution guidelines |
 
 ---
@@ -27,16 +26,15 @@ This application helps families (primarily targeting the household financial dec
 - **Manage Investments** - Track investment contributions with compound interest projections
 - **Analyze Loans** - Calculate loan affordability with stress testing
 - **Set Savings Goals** - Track progress toward financial targets including emergency funds
-- **Get AI Insights** - Receive personalized financial recommendations
 
 ### Key Features
 
 ```
 +------------------+     +------------------+     +------------------+
-|    Dashboard     |     |  AI Insights     |     |  Loan Analysis   |
-|  - Monthly KPIs  |     |  - Health Score  |     |  - Calculator    |
-|  - Quick Stats   |     |  - Patterns      |     |  - Stress Tests  |
-|  - Charts        |     |  - Advice        |     |  - Comparisons   |
+|    Dashboard     |     |  Loan Analysis   |     |   Investments    |
+|  - Monthly KPIs  |     |  - Calculator    |     |  - Projections   |
+|  - Quick Stats   |     |  - Stress Tests  |     |  - Growth Charts |
+|  - Charts        |     |  - Comparisons   |     |  - Tracking      |
 +------------------+     +------------------+     +------------------+
          |                       |                       |
          +----------+------------+-----------+-----------+
@@ -47,8 +45,8 @@ This application helps families (primarily targeting the household financial dec
               +------------+          +------------+
                     |                        |
               +-----v------+          +------v-----+
-              | Investments|          |   Goals    |
-              |  & Growth  |          |  Savings   |
+              |   Goals    |          |   Loans    |
+              |  Savings   |          |   Active   |
               +------------+          +------------+
 ```
 
@@ -70,7 +68,6 @@ The main overview showing current month's financial health:
 - Top expense categories
 - Active loans summary
 - Savings goal progress
-- AI-powered executive summary
 
 ### 2. Expenses (`/vydaje`)
 Manage monthly expense categories:
@@ -119,7 +116,6 @@ Investment tracking with projections:
 | Styling | Tailwind CSS 4, shadcn/ui |
 | Backend | Next.js API Routes |
 | Database | SQLite with Prisma ORM |
-| AI | OpenAI GPT-5 mini |
 | Testing | Vitest, Testing Library |
 
 ---
@@ -133,10 +129,6 @@ npm install
 # Setup database
 npx prisma migrate dev
 npm run db:seed
-
-# Configure environment
-cp .env.example .env
-# Add your OPEN_AI_API key
 
 # Start development server
 npm run dev

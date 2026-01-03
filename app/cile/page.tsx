@@ -13,41 +13,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { CardSkeleton } from '@/components/ui/skeleton'
 import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Plus, Minus, Target, Shield, PiggyBank, Pencil, Trash2 } from 'lucide-react'
-import { AiInsightCard } from '@/components/ai-insight-card'
-import { getCurrentPeriod } from '@/lib/format'
-
-interface FundTransaction {
-  id: string
-  amount: number
-  description: string | null
-  date: string
-}
-
-interface SavingGoal {
-  id: string
-  name: string
-  targetAmount: number | null
-  currentAmount: number
-  isEmergency: boolean
-  progress: number
-  recommendedTarget?: number
-  transactions: FundTransaction[]
-}
-
-interface GoalsData {
-  goals: SavingGoal[]
-  avgMonthlyExpenses: number
-}
+import type { GoalsPageData, SavingGoalWithProgress } from '@/lib/types'
 
 export default function GoalsPage() {
-  const [data, setData] = useState<GoalsData | null>(null)
+  const [data, setData] = useState<GoalsPageData | null>(null)
   const [loading, setLoading] = useState(true)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false)
-  const [selectedGoal, setSelectedGoal] = useState<SavingGoal | null>(null)
+  const [selectedGoal, setSelectedGoal] = useState<SavingGoalWithProgress | null>(null)
   const [transactionAmount, setTransactionAmount] = useState('')
   const [transactionDesc, setTransactionDesc] = useState('')
   const [transactionType, setTransactionType] = useState<'deposit' | 'withdraw'>('deposit')
@@ -65,7 +42,7 @@ export default function GoalsPage() {
     isEmergency: boolean
   } | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [goalToDelete, setGoalToDelete] = useState<SavingGoal | null>(null)
+  const [goalToDelete, setGoalToDelete] = useState<SavingGoalWithProgress | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -131,13 +108,13 @@ export default function GoalsPage() {
     }
   }
 
-  const openTransactionDialog = (goal: SavingGoal, type: 'deposit' | 'withdraw') => {
+  const openTransactionDialog = (goal: SavingGoalWithProgress, type: 'deposit' | 'withdraw') => {
     setSelectedGoal(goal)
     setTransactionType(type)
     setTransactionDialogOpen(true)
   }
 
-  const openEditDialog = (goal: SavingGoal) => {
+  const openEditDialog = (goal: SavingGoalWithProgress) => {
     setEditGoal({
       id: goal.id,
       name: goal.name,
@@ -171,7 +148,7 @@ export default function GoalsPage() {
     }
   }
 
-  const openDeleteDialog = (goal: SavingGoal) => {
+  const openDeleteDialog = (goal: SavingGoalWithProgress) => {
     setGoalToDelete(goal)
     setDeleteDialogOpen(true)
   }
@@ -285,14 +262,14 @@ export default function GoalsPage() {
       {loading ? (
         <div className="grid grid-cols-2 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-48 animate-pulse rounded border border-border bg-muted" />
+            <CardSkeleton key={i} height="h-48" />
           ))}
         </div>
       ) : data?.goals.length === 0 ? (
         <Card className="opacity-0 animate-fade-in stagger-2">
           <CardContent className="py-12 text-center">
             <Target className="mx-auto h-12 w-12 text-muted-foreground/50" />
-            <p className="mt-4 text-muted-foreground">Zatim nemáte žádné spořicí cíle</p>
+            <p className="mt-4 text-muted-foreground">Zatim nemate zadne sporici cile</p>
             <Button className="mt-4" onClick={() => setCreateDialogOpen(true)}>
               Vytvorit prvni cil
             </Button>
@@ -340,7 +317,6 @@ export default function GoalsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {/* Current Amount */}
                   <div>
                     <div className="flex items-baseline justify-between">
                       <span className="font-mono-numbers text-2xl font-semibold">
@@ -362,7 +338,6 @@ export default function GoalsPage() {
                     )}
                   </div>
 
-                  {/* Actions */}
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
@@ -385,8 +360,7 @@ export default function GoalsPage() {
                     </Button>
                   </div>
 
-                  {/* Recent Transactions */}
-                  {goal.transactions.length > 0 && (
+                  {goal.transactions && goal.transactions.length > 0 && (
                     <div className="border-t border-border pt-3">
                       <div className="text-xs font-medium text-muted-foreground mb-2">
                         Posledni transakce
@@ -420,14 +394,6 @@ export default function GoalsPage() {
           ))}
         </div>
       )}
-
-      {/* AI Insights */}
-      <AiInsightCard
-        section="goals"
-        year={getCurrentPeriod().year}
-        month={getCurrentPeriod().month}
-        className="stagger-4"
-      />
 
       {/* Transaction Dialog */}
       <Dialog open={transactionDialogOpen} onOpenChange={setTransactionDialogOpen}>

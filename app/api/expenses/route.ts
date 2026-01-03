@@ -1,10 +1,13 @@
-import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import {
+  getPeriodFromRequest,
+  successResponse,
+  errorResponse,
+  badRequestResponse,
+} from '@/lib/api'
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString())
-  const month = parseInt(searchParams.get('month') || (new Date().getMonth() + 1).toString())
+  const { year, month } = getPeriodFromRequest(request)
 
   try {
     const categories = await prisma.category.findMany({
@@ -16,7 +19,7 @@ export async function GET(request: Request) {
       },
     })
 
-    return NextResponse.json({
+    return successResponse({
       year,
       month,
       categories: categories.map((cat) => ({
@@ -29,7 +32,7 @@ export async function GET(request: Request) {
     })
   } catch (error) {
     console.error('Error fetching expenses:', error)
-    return NextResponse.json({ error: 'Failed to fetch expenses' }, { status: 500 })
+    return errorResponse('Failed to fetch expenses')
   }
 }
 
@@ -39,10 +42,9 @@ export async function POST(request: Request) {
     const { categoryId, year, month, amount } = body
 
     if (!categoryId || !year || !month || amount === undefined) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      return badRequestResponse()
     }
 
-    // Upsert the expense (replace if exists)
     const expense = await prisma.expense.upsert({
       where: {
         categoryId_year_month: { categoryId, year, month },
@@ -51,9 +53,9 @@ export async function POST(request: Request) {
       create: { categoryId, year, month, amount },
     })
 
-    return NextResponse.json(expense)
+    return successResponse(expense)
   } catch (error) {
     console.error('Error saving expense:', error)
-    return NextResponse.json({ error: 'Failed to save expense' }, { status: 500 })
+    return errorResponse('Failed to save expense')
   }
 }

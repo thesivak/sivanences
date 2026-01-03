@@ -35,9 +35,13 @@ async function main() {
 
   // Create income sources
   const incomeSources = [
-    { name: 'Mzda', order: 1 },
-    { name: 'Bonusy', order: 2 },
-    { name: 'Ostatni', order: 3 },
+    { name: 'Zapfloor', order: 1 },
+    { name: 'Rodicovska', order: 2 },
+    { name: 'Hosting', order: 3 },
+    { name: 'Matthew', order: 4 },
+    { name: 'Mamka energie', order: 5 },
+    { name: 'Matthew na domacnost', order: 6 },
+    { name: 'Maruska najem', order: 7 },
   ]
 
   for (const src of incomeSources) {
@@ -56,7 +60,7 @@ async function main() {
   const getCategoryId = (name: string) => allCategories.find((c) => c.name === name)?.id
   const getSourceId = (name: string) => allSources.find((s) => s.name === name)?.id
 
-  // Sample expense data for last 6 months
+  // Sample expense data for current month
   const now = new Date()
   const currentYear = now.getFullYear()
   const currentMonth = now.getMonth() + 1
@@ -108,51 +112,105 @@ async function main() {
   }
   console.log('Created sample expenses')
 
-  // Create income data for last 6 months
-  const mzdaId = getSourceId('Mzda')
-  const bonusyId = getSourceId('Bonusy')
+  // Create income data for current month
+  const incomeData = [
+    { sourceName: 'Zapfloor', amount: 200000 },
+    { sourceName: 'Rodicovska', amount: 6250 },
+    { sourceName: 'Hosting', amount: 4000 },
+    { sourceName: 'Matthew', amount: 65000 },
+    { sourceName: 'Mamka energie', amount: 3000 },
+    { sourceName: 'Matthew na domacnost', amount: 10000 },
+    { sourceName: 'Maruska najem', amount: 10000 },
+  ]
 
-  for (let i = 0; i < 6; i++) {
-    let month = currentMonth - i
-    let year = currentYear
-    if (month <= 0) {
-      month += 12
-      year -= 1
-    }
-
-    // Monthly salary
-    if (mzdaId) {
+  for (const income of incomeData) {
+    const sourceId = getSourceId(income.sourceName)
+    if (sourceId) {
       await prisma.income.upsert({
         where: {
-          sourceId_year_month: { sourceId: mzdaId, year, month },
+          sourceId_year_month: { sourceId, year: currentYear, month: currentMonth },
         },
-        update: { amount: 85000 },
-        create: { sourceId: mzdaId, year, month, amount: 85000 },
-      })
-    }
-
-    // Quarterly bonuses
-    if (bonusyId && month % 3 === 0) {
-      await prisma.income.upsert({
-        where: {
-          sourceId_year_month: { sourceId: bonusyId, year, month },
-        },
-        update: { amount: 15000 },
-        create: { sourceId: bonusyId, year, month, amount: 15000 },
+        update: { amount: income.amount },
+        create: { sourceId, year: currentYear, month: currentMonth, amount: income.amount },
       })
     }
   }
-  console.log('Created sample income')
+  console.log('Created income data')
+
+  // Create investment types
+  const investmentTypes = [
+    {
+      name: 'Zlato',
+      order: 1,
+      totalInvested: 90000,
+      annualRate: 0.09,
+      investmentYears: 10,
+    },
+    {
+      name: 'Penzijni',
+      order: 2,
+      totalInvested: 24721,
+      annualRate: 0.07,
+      investmentYears: 23,
+    },
+    {
+      name: 'Hotovost',
+      order: 3,
+      totalInvested: null,
+      annualRate: null,
+      investmentYears: null,
+    },
+  ]
+
+  for (const type of investmentTypes) {
+    await prisma.investmentType.upsert({
+      where: { name: type.name },
+      update: {
+        totalInvested: type.totalInvested,
+        annualRate: type.annualRate,
+        investmentYears: type.investmentYears,
+      },
+      create: type,
+    })
+  }
+  console.log('Created investment types')
+
+  // Get investment types for reference
+  const allInvestmentTypes = await prisma.investmentType.findMany()
+  const getInvestmentTypeId = (name: string) => allInvestmentTypes.find((t) => t.name === name)?.id
+
+  // Create monthly investment data
+  const monthlyInvestments = [
+    { typeName: 'Zlato', amount: 10000 },
+    { typeName: 'Penzijni', amount: 3000 },
+    { typeName: 'Hotovost', amount: 45000 },
+  ]
+
+  for (const inv of monthlyInvestments) {
+    const typeId = getInvestmentTypeId(inv.typeName)
+    if (typeId) {
+      await prisma.investment.upsert({
+        where: {
+          typeId_year_month: { typeId, year: currentYear, month: currentMonth },
+        },
+        update: { amount: inv.amount },
+        create: { typeId, year: currentYear, month: currentMonth, amount: inv.amount },
+      })
+    }
+  }
+  console.log('Created investment data')
 
   // Create saving goals
   await prisma.savingGoal.upsert({
     where: { id: 'emergency-fund' },
-    update: {},
+    update: {
+      currentAmount: 45000,
+    },
     create: {
       id: 'emergency-fund',
       name: 'Nouzovy fond',
       targetAmount: 200000,
-      currentAmount: 85000,
+      currentAmount: 45000,
       isEmergency: true,
       order: 1,
     },
@@ -160,32 +218,21 @@ async function main() {
 
   await prisma.savingGoal.upsert({
     where: { id: 'vacation-fund' },
-    update: {},
+    update: {
+      currentAmount: 5000,
+    },
     create: {
       id: 'vacation-fund',
       name: 'Dovolena',
       targetAmount: 60000,
-      currentAmount: 25000,
+      currentAmount: 5000,
       isEmergency: false,
       order: 2,
     },
   })
-
-  await prisma.savingGoal.upsert({
-    where: { id: 'car-fund' },
-    update: {},
-    create: {
-      id: 'car-fund',
-      name: 'Nove auto',
-      targetAmount: 400000,
-      currentAmount: 120000,
-      isEmergency: false,
-      order: 3,
-    },
-  })
   console.log('Created saving goals')
 
-  // Add some fund transactions
+  // Clear and recreate fund transactions
   await prisma.fundTransaction.deleteMany({})
 
   await prisma.fundTransaction.createMany({
@@ -193,10 +240,28 @@ async function main() {
       { savingGoalId: 'emergency-fund', amount: 10000, description: 'Mesicni vklad' },
       { savingGoalId: 'emergency-fund', amount: 10000, description: 'Mesicni vklad' },
       { savingGoalId: 'vacation-fund', amount: 5000, description: 'Useteno z bonusu' },
-      { savingGoalId: 'car-fund', amount: 15000, description: 'Mesicni uspora' },
     ],
   })
   console.log('Created fund transactions')
+
+  // Active loans (currently none)
+  // Uncomment and modify if you want to seed loans:
+  // await prisma.activeLoan.upsert({
+  //   where: { id: 'hypoteka' },
+  //   update: {},
+  //   create: {
+  //     id: 'hypoteka',
+  //     name: 'Hypoteka',
+  //     type: 'MORTGAGE',
+  //     originalAmount: 3000000,
+  //     remainingAmount: 2500000,
+  //     interestRate: 5.5,
+  //     monthlyPayment: 18000,
+  //     startDate: new Date('2023-01-01'),
+  //     termMonths: 360,
+  //   },
+  // })
+  console.log('No active loans to seed')
 
   console.log('Database seeded successfully!')
 }

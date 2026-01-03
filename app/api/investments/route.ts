@@ -1,12 +1,15 @@
-import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import {
+  getPeriodFromRequest,
+  successResponse,
+  errorResponse,
+  badRequestResponse,
+} from '@/lib/api'
 
 export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString())
-    const month = parseInt(searchParams.get('month') || (new Date().getMonth() + 1).toString())
+  const { year, month } = getPeriodFromRequest(request)
 
+  try {
     const types = await prisma.investmentType.findMany({
       orderBy: { order: 'asc' },
       include: {
@@ -17,7 +20,7 @@ export async function GET(request: Request) {
       },
     })
 
-    const result = {
+    return successResponse({
       year,
       month,
       types: types.map((t) => ({
@@ -29,12 +32,10 @@ export async function GET(request: Request) {
         investmentYears: t.investmentYears,
         investment: t.investments[0] || null,
       })),
-    }
-
-    return NextResponse.json(result)
+    })
   } catch (error) {
     console.error('Error fetching investments:', error)
-    return NextResponse.json({ error: 'Failed to fetch investments' }, { status: 500 })
+    return errorResponse('Failed to fetch investments')
   }
 }
 
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
     const { typeId, year, month, amount } = body
 
     if (!typeId || !year || !month || amount === undefined) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      return badRequestResponse()
     }
 
     const investment = await prisma.investment.upsert({
@@ -55,9 +56,9 @@ export async function POST(request: Request) {
       create: { typeId, year, month, amount },
     })
 
-    return NextResponse.json(investment)
+    return successResponse(investment)
   } catch (error) {
     console.error('Error saving investment:', error)
-    return NextResponse.json({ error: 'Failed to save investment' }, { status: 500 })
+    return errorResponse('Failed to save investment')
   }
 }

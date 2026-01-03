@@ -42,14 +42,27 @@ CREATE TABLE "Income" (
 );
 
 -- CreateTable
-CREATE TABLE "TaxDeductible" (
+CREATE TABLE "InvestmentType" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "type" TEXT NOT NULL,
-    "amount" REAL NOT NULL,
-    "year" INTEGER NOT NULL,
-    "note" TEXT,
+    "name" TEXT NOT NULL,
+    "order" INTEGER NOT NULL DEFAULT 0,
+    "totalInvested" REAL,
+    "annualRate" REAL,
+    "investmentYears" INTEGER,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "Investment" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "amount" REAL NOT NULL,
+    "year" INTEGER NOT NULL,
+    "month" INTEGER NOT NULL,
+    "typeId" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "Investment_typeId_fkey" FOREIGN KEY ("typeId") REFERENCES "InvestmentType" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -87,6 +100,27 @@ CREATE TABLE "LoanScenario" (
     "monthlyPayment" REAL NOT NULL,
     "totalPayment" REAL NOT NULL,
     "totalInterest" REAL NOT NULL,
+    "verdictStatus" TEXT,
+    "verdictLabel" TEXT,
+    "verdictReason" TEXT,
+    "budgetImpact" REAL,
+    "budgetIncome" REAL,
+    "budgetExpenses" REAL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "ActiveLoan" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "originalAmount" REAL NOT NULL,
+    "remainingAmount" REAL NOT NULL,
+    "interestRate" REAL NOT NULL,
+    "monthlyPayment" REAL NOT NULL,
+    "startDate" DATETIME NOT NULL,
+    "termMonths" INTEGER NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
 );
@@ -110,10 +144,13 @@ CREATE INDEX "Income_year_month_idx" ON "Income"("year", "month");
 CREATE UNIQUE INDEX "Income_sourceId_year_month_key" ON "Income"("sourceId", "year", "month");
 
 -- CreateIndex
-CREATE INDEX "TaxDeductible_year_idx" ON "TaxDeductible"("year");
+CREATE UNIQUE INDEX "InvestmentType_name_key" ON "InvestmentType"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "TaxDeductible_type_year_key" ON "TaxDeductible"("type", "year");
+CREATE INDEX "Investment_year_month_idx" ON "Investment"("year", "month");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Investment_typeId_year_month_key" ON "Investment"("typeId", "year", "month");
 
 -- CreateIndex
 CREATE INDEX "FundTransaction_savingGoalId_idx" ON "FundTransaction"("savingGoalId");

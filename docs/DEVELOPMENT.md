@@ -9,7 +9,6 @@ Complete guide for setting up, developing, and contributing to the Rodinny Rozpo
 - **Node.js** 18.x or higher
 - **npm** 9.x or higher
 - **Git**
-- **OpenAI API key** (for AI features)
 
 ---
 
@@ -33,9 +32,6 @@ npm install
 ```bash
 # Create environment file
 cp .env.example .env
-
-# Edit .env and add your OpenAI API key
-OPEN_AI_API=sk-proj-your-key-here
 ```
 
 ### 4. Initialize Database
@@ -95,7 +91,6 @@ sivanences/
 │   ├── db.ts             # Prisma client
 │   ├── format.ts         # Formatting utils
 │   ├── loan.ts           # Loan calculations
-│   ├── ai-prompts.ts     # AI prompt builders
 │   └── types.ts          # TypeScript types
 │
 ├── prisma/               # Database
@@ -550,7 +545,6 @@ Use browser DevTools:
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `DATABASE_URL` | Yes | SQLite file path |
-| `OPEN_AI_API` | Yes | OpenAI API key |
 
 ### Adding New Variables
 
@@ -588,7 +582,6 @@ npm start
 ### Environment Considerations
 
 - Ensure `DATABASE_URL` points to persistent storage
-- Set `OPEN_AI_API` securely
 - Consider database backup strategy
 
 ---
@@ -607,11 +600,6 @@ npx prisma generate
 npx prisma migrate reset
 npm run db:seed
 ```
-
-**OpenAI API errors:**
-- Verify API key in `.env`
-- Check API quota/billing
-- Review request format
 
 **Build failures:**
 ```bash
@@ -633,5 +621,4 @@ npx tsc --noEmit
 - [Prisma Documentation](https://www.prisma.io/docs)
 - [Tailwind CSS](https://tailwindcss.com/docs)
 - [shadcn/ui](https://ui.shadcn.com)
-- [OpenAI API](https://platform.openai.com/docs)
 - [Vitest](https://vitest.dev)

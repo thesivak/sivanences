@@ -78,18 +78,6 @@ This document describes the database schema used by the Rodinny Rozpocet applica
 │ budgetIncome    │
 │ budgetExpenses  │
 └─────────────────┘
-
-
-┌─────────────────┐
-│  CachedInsight  │
-│─────────────────│
-│ id (PK)         │
-│ section         │
-│ year            │
-│ month           │
-│ insights (JSON) │
-│ generatedAt     │
-└─────────────────┘
 ```
 
 ---
@@ -414,54 +402,6 @@ model ActiveLoan {
 | termMonths | Int | Original term in months |
 
 **Note:** The `calculatedRemaining` field in API responses is computed based on payments made since `startDate`.
-
----
-
-### CachedInsight
-
-AI-generated insight cache.
-
-```prisma
-model CachedInsight {
-  id          String   @id @default(cuid())
-  section     String
-  year        Int
-  month       Int
-  insights    String
-  generatedAt DateTime @default(now())
-
-  @@unique([section, year, month])
-  @@index([section, year, month])
-}
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| id | String | Primary key (CUID) |
-| section | String | Section name (dashboard, expenses, etc.) |
-| year | Int | Year |
-| month | Int | Month |
-| insights | String | JSON-stringified InsightResponse |
-| generatedAt | DateTime | When insight was generated |
-
-**Section Values:**
-- `dashboard`
-- `expenses`
-- `income`
-- `investments`
-- `goals`
-- `loans`
-
-**Insight JSON Structure:**
-```json
-{
-  "summary": "Brief overview text",
-  "patterns": ["Pattern 1", "Pattern 2", "Pattern 3"],
-  "recommendations": ["Recommendation 1", "Recommendation 2"],
-  "healthScore": 75,
-  "healthLabel": "Dobry"
-}
-```
 
 ---
 

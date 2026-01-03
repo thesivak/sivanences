@@ -1,10 +1,13 @@
-import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import {
+  getPeriodFromRequest,
+  successResponse,
+  errorResponse,
+  badRequestResponse,
+} from '@/lib/api'
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString())
-  const month = parseInt(searchParams.get('month') || (new Date().getMonth() + 1).toString())
+  const { year, month } = getPeriodFromRequest(request)
 
   try {
     const sources = await prisma.incomeSource.findMany({
@@ -16,7 +19,7 @@ export async function GET(request: Request) {
       },
     })
 
-    return NextResponse.json({
+    return successResponse({
       year,
       month,
       sources: sources.map((src) => ({
@@ -28,7 +31,7 @@ export async function GET(request: Request) {
     })
   } catch (error) {
     console.error('Error fetching income:', error)
-    return NextResponse.json({ error: 'Failed to fetch income' }, { status: 500 })
+    return errorResponse('Failed to fetch income')
   }
 }
 
@@ -38,7 +41,7 @@ export async function POST(request: Request) {
     const { sourceId, year, month, amount } = body
 
     if (!sourceId || !year || !month || amount === undefined) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      return badRequestResponse()
     }
 
     const income = await prisma.income.upsert({
@@ -49,9 +52,9 @@ export async function POST(request: Request) {
       create: { sourceId, year, month, amount },
     })
 
-    return NextResponse.json(income)
+    return successResponse(income)
   } catch (error) {
     console.error('Error saving income:', error)
-    return NextResponse.json({ error: 'Failed to save income' }, { status: 500 })
+    return errorResponse('Failed to save income')
   }
 }

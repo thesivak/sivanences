@@ -47,8 +47,6 @@ import {
   XCircle,
   BarChart3,
 } from 'lucide-react'
-import { AiInsightCard } from '@/components/ai-insight-card'
-import { getCurrentPeriod } from '@/lib/format'
 import {
   LineChart,
   Line,
@@ -533,14 +531,6 @@ export default function LoansPage() {
 
         {/* Results */}
         <div className="col-span-6 space-y-6">
-          {/* AI Insights */}
-          <AiInsightCard
-            section="loans"
-            year={getCurrentPeriod().year}
-            month={getCurrentPeriod().month}
-            className="stagger-2"
-          />
-
           {result ? (
             <>
               {/* Verdict */}

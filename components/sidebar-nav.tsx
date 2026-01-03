@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { NAV_ITEMS } from '@/lib/types'
 import {
   LayoutDashboard,
   Receipt,
@@ -11,17 +12,19 @@ import {
   Target,
   Calculator,
   Download,
+  type LucideIcon,
 } from 'lucide-react'
 
-const navItems = [
-  { href: '/', label: 'Prehled', icon: LayoutDashboard },
-  { href: '/vydaje', label: 'Vydaje', icon: Receipt },
-  { href: '/prijmy', label: 'Prijmy', icon: Wallet },
-  { href: '/investice', label: 'Investice', icon: TrendingUp },
-  { href: '/cile', label: 'Cile', icon: Target },
-  { href: '/pujcky', label: 'Pujcky', icon: Calculator },
-  { href: '/export', label: 'Export', icon: Download },
-]
+// Icon mapping - maps string names to actual icon components
+const iconMap: Record<string, LucideIcon> = {
+  LayoutDashboard,
+  Receipt,
+  Wallet,
+  TrendingUp,
+  Target,
+  Calculator,
+  Download,
+}
 
 export function SidebarNav() {
   const pathname = usePathname()
@@ -43,9 +46,9 @@ export function SidebarNav() {
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 px-3 py-4">
-          {navItems.map((item, index) => {
+          {NAV_ITEMS.map((item, index) => {
             const isActive = pathname === item.href
-            const Icon = item.icon
+            const Icon = iconMap[item.icon] || LayoutDashboard
 
             return (
               <Link

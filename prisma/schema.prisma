@@ -167,15 +167,3 @@ model ActiveLoan {
   updatedAt DateTime @updatedAt
 }
 
-// Cached AI insights for instant loading
-model CachedInsight {
-  id          String   @id @default(cuid())
-  section     String   // 'dashboard' | 'expenses' | 'income' | 'investments' | 'goals' | 'loans'
-  year        Int
-  month       Int
-  insights    String   // JSON stringified InsightResponse
-  generatedAt DateTime @default(now())
-
-  @@unique([section, year, month])
-  @@index([section, year, month])
-}
