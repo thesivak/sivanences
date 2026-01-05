@@ -150,7 +150,7 @@ Visit `http://localhost:3000`
 ## File Structure Overview
 
 ```
-sivanences/
+sivaces/
 ├── app/                    # Next.js App Router
 │   ├── api/               # Backend API routes
 │   ├── page.tsx           # Dashboard

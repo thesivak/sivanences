@@ -18,7 +18,7 @@ Complete guide for setting up, developing, and contributing to the Rodinny Rozpo
 
 ```bash
 git clone <repository-url>
-cd sivanences
+cd sivaces
 ```
 
 ### 2. Install Dependencies
@@ -75,7 +75,7 @@ Visit `http://localhost:3000`
 ## Project Structure
 
 ```
-sivanences/
+sivaces/
 ├── app/                    # Next.js App Router
 │   ├── api/               # API routes
 │   ├── page.tsx           # Dashboard page

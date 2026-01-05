@@ -83,7 +83,7 @@ This document describes the technical architecture, technology stack, and projec
 ## Project Structure
 
 ```
-sivanences/
+sivaces/
 │
 ├── app/                          # Next.js App Router
 │   ├── api/                      # API Routes (Backend)
