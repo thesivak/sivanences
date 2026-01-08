@@ -6,7 +6,6 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
 }
 
 // Expense categories (flat list, 10-20 items)
