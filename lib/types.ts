@@ -202,6 +202,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/investice', label: 'Investice', icon: 'TrendingUp' },
   { href: '/cile', label: 'Cíle', icon: 'Target' },
   { href: '/pujcky', label: 'Půjčky', icon: 'Calculator' },
+  { href: '/vypisky', label: 'Výpisky', icon: 'FileText' },
   { href: '/export', label: 'Export', icon: 'Download' },
 ] as const
 
@@ -325,4 +326,111 @@ export const DEFAULT_CZECH_BENCHMARKS: CzechBenchmarks = {
   housingPercent: 0.25,        // 25% of income
   transportationPercent: 0.10, // 10% of income
   utilitiesPercent: 0.08,      // 8% of income
+}
+
+// ============================================
+// Bank Statement Parsing Types
+// ============================================
+
+export type BankAccountType = 'checking' | 'savings' | 'credit_card' | 'business' | 'investment'
+
+export interface UserBankAccount {
+  id: string
+  name: string
+  accountNumber: string
+  bankCode: string | null
+  iban: string | null
+  accountType: BankAccountType
+  isActive: boolean
+}
+
+export type TransactionType = 'expense' | 'income' | 'transfer' | 'unknown'
+
+export interface ParsedTransaction {
+  id: string                    // Temporary ID for UI
+  date: string                  // ISO date string
+  description: string           // Original description from statement
+  amount: number                // Positive for income, negative for expenses
+  counterAccountNumber: string | null  // Counter-party account number
+  counterAccountName: string | null    // Counter-party name if available
+  variableSymbol: string | null
+  constantSymbol: string | null
+  specificSymbol: string | null
+  transactionType: TransactionType
+  suggestedCategoryId: string | null   // AI-suggested category
+  suggestedCategoryName: string | null // For display
+  suggestedIncomeSourceId: string | null // For income transactions
+  suggestedIncomeSourceName: string | null
+  confidence: number            // AI confidence 0-1
+  isInternalTransfer: boolean   // Transfer between own accounts
+  isDuplicate: boolean          // Potential duplicate detected
+  duplicateReason: string | null // Why it's considered duplicate
+  excluded: boolean             // User excluded this transaction
+  excludeReason: string | null  // Reason for exclusion
+}
+
+export interface BankStatementMetadata {
+  bankName: string
+  accountNumber: string
+  accountType: 'checking' | 'credit_card'
+  periodStart: string           // ISO date
+  periodEnd: string             // ISO date
+  statementNumber: string | null
+  ownerName: string | null
+  currency: string
+  startingBalance: number
+  endingBalance: number
+  totalCredits: number
+  totalDebits: number
+}
+
+export interface ParsedBankStatement {
+  metadata: BankStatementMetadata
+  transactions: ParsedTransaction[]
+  summary: {
+    totalTransactions: number
+    totalExpenses: number
+    totalIncome: number
+    internalTransfers: number
+    excludedCount: number
+    duplicateCount: number
+  }
+}
+
+export interface BankStatementUpload {
+  id: string
+  filename: string
+  statementPeriod: string
+  accountNumber: string | null
+  bankName: string | null
+  accountType: string | null
+  startingBalance: number | null
+  endingBalance: number | null
+  totalCredits: number | null
+  totalDebits: number | null
+  transactionCount: number | null
+  status: 'pending' | 'reviewed' | 'applied'
+  appliedAt: string | null
+  parsedData: ParsedBankStatement | null
+  createdAt: string
+}
+
+export interface ApplyTransactionsRequest {
+  uploadId: string
+  year: number
+  month: number
+  transactions: {
+    id: string
+    categoryId?: string       // For expenses
+    incomeSourceId?: string   // For income
+    excluded: boolean
+  }[]
+}
+
+export interface ApplyTransactionsResult {
+  success: boolean
+  expensesUpdated: number
+  incomeUpdated: number
+  categoriesAffected: string[]
+  incomeSourcesAffected: string[]
 }

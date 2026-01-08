@@ -2,7 +2,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../lib/generated/prisma"
 }
 
 datasource db {
@@ -205,18 +204,36 @@ model AIFeedback {
 
 // Bank statement uploads for AI parsing
 model BankStatementUpload {
-  id               String   @id @default(cuid())
-  filename         String   // Original filename
-  statementPeriod  String   // e.g., "12/2025" extracted from statement
-  accountNumber    String?  // Bank account number from statement
-  bankName         String?  // Bank name (e.g., "Česká spořitelna")
-  startingBalance  Float?   // Opening balance
-  endingBalance    Float?   // Closing balance
-  totalCredits     Float?   // Total income/credits
-  totalDebits      Float?   // Total expenses/debits
-  transactionCount Int?     // Number of transactions parsed
-  status           String   @default("pending") // "pending" | "reviewed" | "applied"
+  id               String    @id @default(cuid())
+  filename         String    // Original filename
+  statementPeriod  String    // e.g., "12/2025" extracted from statement
+  accountNumber    String?   // Bank account number from statement
+  bankName         String?   // Bank name (e.g., "Česká spořitelna")
+  accountType      String?   // "checking" | "credit_card"
+  startingBalance  Float?    // Opening balance
+  endingBalance    Float?    // Closing balance
+  totalCredits     Float?    // Total income/credits
+  totalDebits      Float?    // Total expenses/debits
+  transactionCount Int?      // Number of transactions parsed
+  status           String    @default("pending") // "pending" | "reviewed" | "applied"
   appliedAt        DateTime? // When transactions were applied to expenses
+  parsedData       String?   // JSON: parsed transactions for review
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([statementPeriod])
+}
+
+// User's own bank accounts (for excluding internal transfers)
+model UserBankAccount {
+  id            String  @id @default(cuid())
+  name          String  // User-friendly name, e.g., "Hlavní účet", "Spořicí účet"
+  accountNumber String  @unique // Bank account number (e.g., "2647271193/0800")
+  bankCode      String? // Bank code (e.g., "0800")
+  iban          String? // IBAN if available
+  accountType   String  // "checking" | "savings" | "credit_card" | "business" | "investment"
+  isActive      Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

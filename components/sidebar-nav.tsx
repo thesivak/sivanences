@@ -13,6 +13,7 @@ import {
   Target,
   Calculator,
   Download,
+  FileText,
   ChevronLeft,
   ChevronRight,
   type LucideIcon,
@@ -27,6 +28,7 @@ const iconMap: Record<string, LucideIcon> = {
   Target,
   Calculator,
   Download,
+  FileText,
 }
 
 export function SidebarNav() {
