@@ -203,3 +203,22 @@ model AIFeedback {
   createdAt DateTime @default(now())
 }
 
+// Bank statement uploads for AI parsing
+model BankStatementUpload {
+  id               String   @id @default(cuid())
+  filename         String   // Original filename
+  statementPeriod  String   // e.g., "12/2025" extracted from statement
+  accountNumber    String?  // Bank account number from statement
+  bankName         String?  // Bank name (e.g., "Česká spořitelna")
+  startingBalance  Float?   // Opening balance
+  endingBalance    Float?   // Closing balance
+  totalCredits     Float?   // Total income/credits
+  totalDebits      Float?   // Total expenses/debits
+  transactionCount Int?     // Number of transactions parsed
+  status           String   @default("pending") // "pending" | "reviewed" | "applied"
+  appliedAt        DateTime? // When transactions were applied to expenses
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
