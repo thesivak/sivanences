@@ -1,54 +1,41 @@
 import { prisma } from '@/lib/db'
 import { getPeriodFromRequest, successResponse, errorResponse } from '@/lib/api'
-import OpenAI from 'openai'
-import { zodTextFormat } from 'openai/helpers/zod'
-import { z } from 'zod'
+import { isClaudeCliAvailable, callClaudeForJson } from '@/lib/claude'
 import { createHash } from 'crypto'
 import type { AIInsightsResponse, HealthScore } from '@/lib/types'
 
-// Check if OpenAI API key is configured (support both naming conventions)
-const openaiApiKey = process.env.OPENAI_API_KEY || process.env.OPEN_AI_API
+// Check if Claude CLI is available for AI calls (uses Max subscription, no API charges)
+// Falls back to demo mode if CLI is not available
+const claudeCliAvailable = isClaudeCliAvailable()
 
-const openai = openaiApiKey ? new OpenAI({ apiKey: openaiApiKey }) : null
-
-// Use gpt-5-mini as the model (fast and cost-effective)
-const AI_MODEL = 'gpt-5-mini-2025-08-07'
-
-// Define Zod schema for structured outputs
-// Note: OpenAI doesn't support z.record() so we use an array and transform to object
-const SuggestionSchema = z.object({
-  id: z.string(),
-  text: z.string(),
-  impact: z.enum(['vysoký', 'střední', 'nízký']),
-})
-
-const CategoryInsightItemSchema = z.object({
-  categoryName: z.string(),
-  insight: z.string(),
-  trend: z.enum(['up', 'down', 'stable']),
-  benchmarkComparison: z.string().nullable(),
-})
-
-const HealthScoreSchema = z.object({
-  score: z.number().min(0).max(100),
-  label: z.enum(['výborné', 'dobré', 'uspokojivé', 'rizikové', 'kritické']),
-  description: z.string(),
-})
-
-const AIInsightsSchema = z.object({
-  overview: z.object({
-    healthScore: HealthScoreSchema,
-    narrative: z.string(),
-    highlights: z.array(z.string()),
-    warnings: z.array(z.string()),
-    suggestions: z.array(SuggestionSchema),
-  }),
-  categories: z.array(CategoryInsightItemSchema),
-})
+// Response type for Claude AI insights
+interface ClaudeAIInsightsResponse {
+  overview: {
+    healthScore: {
+      score: number
+      label: 'výborné' | 'dobré' | 'uspokojivé' | 'rizikové' | 'kritické'
+      description: string
+    }
+    narrative: string
+    highlights: string[]
+    warnings: string[]
+    suggestions: Array<{
+      id: string
+      text: string
+      impact: 'vysoký' | 'střední' | 'nízký'
+    }>
+  }
+  categories: Array<{
+    categoryName: string
+    insight: string
+    trend: 'up' | 'down' | 'stable'
+    benchmarkComparison: string | null
+  }>
+}
 
 // Transform array-based categories to record format
 function transformCategoriesToRecord(
-  categoriesArray: z.infer<typeof CategoryInsightItemSchema>[]
+  categoriesArray: ClaudeAIInsightsResponse['categories']
 ): Record<string, { insight: string; trend: 'up' | 'down' | 'stable'; benchmarkComparison?: string }> {
   const result: Record<string, { insight: string; trend: 'up' | 'down' | 'stable'; benchmarkComparison?: string }> = {}
   for (const cat of categoriesArray) {
@@ -479,7 +466,7 @@ ${!data.hasHistoricalData ? '\nPOZNÁMKA: Omezená historická data - zaměř se
 Vrať analýzu jako JSON dle specifikované struktury.`
 }
 
-// Generate demo insights when OpenAI is not configured
+// Generate demo insights when Claude CLI is not available
 function generateDemoInsights(data: Awaited<ReturnType<typeof gatherFinancialData>>) {
   const { summary, expensesByCategory, goalsWithProgress, loansSummary, household } = data
 
@@ -645,34 +632,21 @@ export async function GET(request: Request) {
     // Generate data hash for cache validation
     const dataHash = generateDataHash(financialData)
 
-    // Generate new insights with OpenAI or use demo response
+    // Generate new insights with Claude CLI (uses Max subscription) or use demo response
     let result: { overview: unknown; categories: unknown }
 
-    if (!openai) {
-      // Generate demo response when OpenAI is not configured
+    if (!claudeCliAvailable) {
+      // Generate demo response when Claude CLI is not available
+      console.log('Claude CLI not available, using demo insights')
       result = generateDemoInsights(financialData)
     } else {
-      // Use the new Responses API with Structured Outputs for GPT-5 models
-      const response = await openai.responses.parse({
-        model: AI_MODEL,
-        input: [
-          { role: 'system', content: buildSystemPrompt() },
-          { role: 'user', content: buildUserPrompt(financialData) },
-        ],
-        text: {
-          format: zodTextFormat(AIInsightsSchema, 'ai_insights'),
-        },
-      })
-
-      // Get the parsed result - responses.parse() auto-validates against schema
-      const parsed = response.output_parsed
-      if (!parsed) {
-        // Check if there was a refusal or error
-        if (response.status === 'incomplete') {
-          throw new Error(`AI response incomplete: ${response.incomplete_details?.reason || 'unknown reason'}`)
-        }
-        throw new Error('No response from OpenAI')
-      }
+      // Use Claude CLI with Max subscription (no API charges!)
+      console.log('Calling Claude via CLI (using Max subscription)...')
+      const parsed = await callClaudeForJson<ClaudeAIInsightsResponse>(
+        buildSystemPrompt(),
+        buildUserPrompt(financialData),
+        { timeout: 120000 } // 2 minute timeout for AI processing
+      )
 
       // Transform categories array to record format
       result = {

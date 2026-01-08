@@ -1,28 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mockPrisma } from '@/lib/__mocks__/db'
 
-// Clear OpenAI env vars BEFORE module import to use demo mode
-// We use vi.hoisted to ensure this runs before any imports
-vi.hoisted(() => {
-  delete process.env.OPENAI_API_KEY
-  delete process.env.OPEN_AI_API
-})
-
-// Create mock for the new Responses API (not used when OpenAI is disabled)
-const mockResponsesParse = vi.hoisted(() => vi.fn())
-
-// Mock OpenAI with the new Responses API
-vi.mock('openai', () => ({
-  default: class MockOpenAI {
-    responses = {
-      parse: mockResponsesParse,
-    }
-  },
-}))
-
-// Mock zodTextFormat helper
-vi.mock('openai/helpers/zod', () => ({
-  zodTextFormat: vi.fn((schema, name) => ({ schema, name })),
+// Mock Claude CLI to return false for availability (use demo mode in tests)
+// This ensures tests don't require Claude CLI to be installed
+vi.mock('@/lib/claude', () => ({
+  isClaudeCliAvailable: vi.fn(() => false),
+  callClaudeForJson: vi.fn(),
 }))
 
 import { GET, POST } from './route'
@@ -87,7 +70,7 @@ describe('GET /api/ai/insights', () => {
 
     const request = new Request('http://localhost/api/ai/insights?year=2025&month=1')
 
-    // This will fail since OpenAI is mocked, but we can verify the flow
+    // Claude CLI is mocked to return false, so demo insights will be used
     const response = await GET(request)
 
     expect(mockPrisma.expense.findMany).toHaveBeenCalled()
@@ -95,7 +78,7 @@ describe('GET /api/ai/insights', () => {
   })
 
   it('returns stale cache when data hash does not match and error occurs', async () => {
-    // Note: When OpenAI is not configured (no API key), demo insights are used
+    // Note: When Claude CLI is not available, demo insights are used
     // This test verifies that when there's cached data with different hash,
     // demo insights are generated and returned (not stale cache)
     const mockExpenses = [
@@ -147,7 +130,7 @@ describe('GET /api/ai/insights', () => {
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    // Since OpenAI is not configured, demo insights are returned (not stale cache)
+    // Since Claude CLI is not available, demo insights are returned (not stale cache)
     expect(data.overview.narrative).toBeDefined()
     expect(data.metadata.isStale).toBe(false)
   })
@@ -296,11 +279,11 @@ describe('GET /api/ai/insights', () => {
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    // Should return demo insights since hash doesn't match and no OpenAI configured
+    // Should return demo insights since hash doesn't match and Claude CLI is not available
     expect(data.overview).toBeDefined()
   })
 
-  it('generates demo insights when OpenAI is not configured', async () => {
+  it('generates demo insights when Claude CLI is not available', async () => {
     const mockExpenses = [
       {
         id: 'exp1',
