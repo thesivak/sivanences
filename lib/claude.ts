@@ -470,14 +470,14 @@ CRITICAL: Your response must be ONLY a valid JSON object. No markdown code block
   // Remove markdown code blocks if present
   if (result.startsWith('```json')) {
     result = result.slice(7)
-    log(`Stripped ```json prefix`)
+    log('Stripped ```json prefix')
   } else if (result.startsWith('```')) {
     result = result.slice(3)
-    log(`Stripped ``` prefix`)
+    log('Stripped ``` prefix')
   }
   if (result.endsWith('```')) {
     result = result.slice(0, -3)
-    log(`Stripped ``` suffix`)
+    log('Stripped ``` suffix')
   }
   result = result.trim()
 
