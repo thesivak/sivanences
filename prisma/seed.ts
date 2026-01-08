@@ -1,4 +1,4 @@
-import { PrismaClient } from '../lib/generated/prisma'
+import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -80,8 +80,8 @@ async function main() {
   const allCategories = await prisma.category.findMany()
   const allSources = await prisma.incomeSource.findMany()
 
-  const getCategoryId = (name: string) => allCategories.find((c) => c.name === name)?.id
-  const getSourceId = (name: string) => allSources.find((s) => s.name === name)?.id
+  const getCategoryId = (name: string) => allCategories.find((c: { name: string; id: string }) => c.name === name)?.id
+  const getSourceId = (name: string) => allSources.find((s: { name: string; id: string }) => s.name === name)?.id
 
   // Sample expense data for current month
   const now = new Date()
@@ -205,7 +205,7 @@ async function main() {
 
   // Get investment types for reference
   const allInvestmentTypes = await prisma.investmentType.findMany()
-  const getInvestmentTypeId = (name: string) => allInvestmentTypes.find((t) => t.name === name)?.id
+  const getInvestmentTypeId = (name: string) => allInvestmentTypes.find((t: { name: string; id: string }) => t.name === name)?.id
 
   // Create monthly investment data
   const monthlyInvestments = [

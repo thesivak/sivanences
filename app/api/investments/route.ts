@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     return successResponse({
       year,
       month,
-      types: types.map((t) => ({
+      types: types.map((t: { id: string; name: string; order: number; totalInvested: number | null; annualRate: number | null; investmentYears: number | null; investments: unknown[] }) => ({
         id: t.id,
         name: t.name,
         order: t.order,

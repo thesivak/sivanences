@@ -49,7 +49,7 @@ export async function GET() {
     })
 
     // Calculate current balance for each loan
-    const loansWithBalance = loans.map(loan => {
+    const loansWithBalance = loans.map((loan: { originalAmount: number; interestRate: number; termMonths: number; startDate: Date; [key: string]: unknown }) => {
       const { remainingBalance, paymentsMade, monthsRemaining } = calculateCurrentBalance(
         loan.originalAmount,
         loan.interestRate,

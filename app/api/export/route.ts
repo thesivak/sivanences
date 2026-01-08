@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       const expensesCsv = [
         'Rok;Měsíc;Kategorie;Částka',
         ...expenses.map(
-          (e) => `${e.year};${e.month};${e.category.name};${e.amount.toFixed(2).replace('.', ',')}`
+          (e: { year: number; month: number; category: { name: string }; amount: number }) => `${e.year};${e.month};${e.category.name};${e.amount.toFixed(2).replace('.', ',')}`
         ),
       ].join('\n')
 
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
       const incomeCsv = [
         'Rok;Měsíc;Zdroj;Částka',
         ...incomes.map(
-          (i) => `${i.year};${i.month};${i.source.name};${i.amount.toFixed(2).replace('.', ',')}`
+          (i: { year: number; month: number; source: { name: string }; amount: number }) => `${i.year};${i.month};${i.source.name};${i.amount.toFixed(2).replace('.', ',')}`
         ),
       ].join('\n')
 
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
       const investmentsCsv = [
         'Rok;Měsíc;Typ;Částka',
         ...investments.map(
-          (i) => `${i.year};${i.month};${i.type.name};${i.amount.toFixed(2).replace('.', ',')}`
+          (i: { year: number; month: number; type: { name: string }; amount: number }) => `${i.year};${i.month};${i.type.name};${i.amount.toFixed(2).replace('.', ',')}`
         ),
       ].join('\n')
 
@@ -73,7 +73,7 @@ export async function GET(request: Request) {
         '# SPOŘICÍ CÍLE',
         'Název;Cílová částka;Aktuální částka;Nouzový fond',
         ...goals.map(
-          (g) =>
+          (g: { name: string; targetAmount: number | null; currentAmount: number; isEmergency: boolean }) =>
             `${g.name};${g.targetAmount?.toFixed(2).replace('.', ',') || ''};${g.currentAmount.toFixed(2).replace('.', ',')};${g.isEmergency ? 'Ano' : 'Ne'}`
         ),
       ].join('\n')
@@ -93,25 +93,25 @@ export async function GET(request: Request) {
       categories,
       incomeSources,
       investmentTypes,
-      expenses: expenses.map((e) => ({
+      expenses: expenses.map((e: { year: number; month: number; category: { name: string }; amount: number }) => ({
         year: e.year,
         month: e.month,
         category: e.category.name,
         amount: e.amount,
       })),
-      incomes: incomes.map((i) => ({
+      incomes: incomes.map((i: { year: number; month: number; source: { name: string }; amount: number }) => ({
         year: i.year,
         month: i.month,
         source: i.source.name,
         amount: i.amount,
       })),
-      investments: investments.map((i) => ({
+      investments: investments.map((i: { year: number; month: number; type: { name: string }; amount: number }) => ({
         year: i.year,
         month: i.month,
         type: i.type.name,
         amount: i.amount,
       })),
-      savingGoals: goals.map((g) => ({
+      savingGoals: goals.map((g: { name: string; targetAmount: number | null; currentAmount: number; isEmergency: boolean; transactions: unknown[] }) => ({
         name: g.name,
         targetAmount: g.targetAmount,
         currentAmount: g.currentAmount,

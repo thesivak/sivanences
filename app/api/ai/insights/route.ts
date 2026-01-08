@@ -107,24 +107,24 @@ async function gatherFinancialData(year: number, month: number) {
   ])
 
   // Calculate totals
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0)
-  const totalIncome = incomes.reduce((sum, i) => sum + i.amount, 0)
-  const totalInvestments = investments.reduce((sum, i) => sum + i.amount, 0)
-  const totalLoanPayments = activeLoans.reduce((sum, l) => sum + l.monthlyPayment, 0)
+  const totalExpenses = expenses.reduce((sum: number, e: { amount: number }) => sum + e.amount, 0)
+  const totalIncome = incomes.reduce((sum: number, i: { amount: number }) => sum + i.amount, 0)
+  const totalInvestments = investments.reduce((sum: number, i: { amount: number }) => sum + i.amount, 0)
+  const totalLoanPayments = activeLoans.reduce((sum: number, l: { monthlyPayment: number }) => sum + l.monthlyPayment, 0)
   const balance = totalIncome - totalExpenses - totalInvestments - totalLoanPayments
 
   // Emergency fund is tracked via saving goals marked as isEmergency
-  const emergencyFundGoal = savingGoals.find(g => g.isEmergency)
+  const emergencyFundGoal = savingGoals.find((g: { isEmergency: boolean }) => g.isEmergency)
   const emergencyFundBalance = emergencyFundGoal?.currentAmount ?? 0
 
   // Group expenses by category for analysis
-  const expensesByCategory = expenses.map((e) => ({
+  const expensesByCategory = expenses.map((e: { category: { name: string }; amount: number }) => ({
     category: e.category.name,
     amount: e.amount,
   }))
 
   // Group income by source
-  const incomeBySource = incomes.map((i) => ({
+  const incomeBySource = incomes.map((i: { source: { name: string }; amount: number }) => ({
     source: i.source.name,
     amount: i.amount,
   }))
@@ -133,7 +133,7 @@ async function gatherFinancialData(year: number, month: number) {
   const categoryAverages: Record<string, number> = {}
   const categoryHistory: Record<string, number[]> = {}
 
-  historicalExpenses.forEach((e) => {
+  historicalExpenses.forEach((e: { category: { name: string }; amount: number }) => {
     if (!categoryHistory[e.category.name]) {
       categoryHistory[e.category.name] = []
     }
@@ -142,7 +142,7 @@ async function gatherFinancialData(year: number, month: number) {
 
   Object.entries(categoryHistory).forEach(([cat, amounts]) => {
     const last3 = amounts.slice(0, 3)
-    categoryAverages[cat] = last3.length > 0 ? last3.reduce((a, b) => a + b, 0) / last3.length : 0
+    categoryAverages[cat] = last3.length > 0 ? last3.reduce((a: number, b: number) => a + b, 0) / last3.length : 0
   })
 
   // Saving goals with progress
@@ -152,7 +152,7 @@ async function gatherFinancialData(year: number, month: number) {
   const userDefinedEmergencyTarget = householdSettings?.emergencyFundTarget
   const effectiveEmergencyTarget = userDefinedEmergencyTarget ?? calculatedEmergencyTarget
 
-  const goalsWithProgress = savingGoals.map((goal) => {
+  const goalsWithProgress = savingGoals.map((goal: { name: string; currentAmount: number; targetAmount: number | null; isEmergency: boolean }) => {
     // For emergency fund, prioritize household settings custom target over goal's targetAmount
     const effectiveTarget = goal.isEmergency
       ? userDefinedEmergencyTarget ?? goal.targetAmount ?? calculatedEmergencyTarget
@@ -170,7 +170,7 @@ async function gatherFinancialData(year: number, month: number) {
   })
 
   // Investment projections
-  const investmentProjections = investments.map((inv) => {
+  const investmentProjections = investments.map((inv: { amount: number; type: { name: string; totalInvested: number | null; annualRate: number | null; investmentYears: number | null } }) => {
     const type = inv.type
     if (type.totalInvested && type.annualRate && type.investmentYears) {
       const futureValue =
@@ -191,7 +191,7 @@ async function gatherFinancialData(year: number, month: number) {
   })
 
   // Active loans summary
-  const loansSummary = activeLoans.map((loan) => {
+  const loansSummary = activeLoans.map((loan: { name: string; type: string; originalAmount: number; remainingAmount: number; monthlyPayment: number; interestRate: number; startDate: Date; termMonths: number }) => {
     const monthsSinceStart = Math.floor(
       (Date.now() - new Date(loan.startDate).getTime()) / (1000 * 60 * 60 * 24 * 30)
     )
@@ -211,7 +211,7 @@ async function gatherFinancialData(year: number, month: number) {
   })
 
   // Calculate total loan balance
-  const totalLoanBalance = activeLoans.reduce((sum, l) => sum + l.remainingAmount, 0)
+  const totalLoanBalance = activeLoans.reduce((sum: number, l: { remainingAmount: number }) => sum + l.remainingAmount, 0)
 
   return {
     period: { year, month },
@@ -279,7 +279,7 @@ function calculateHealthScore(data: Awaited<ReturnType<typeof gatherFinancialDat
 
   // 3. Emergency Fund (max -25 points)
   // Target: 100% of goal (3-6 months expenses)
-  const emergencyFund = goalsWithProgress.find(g => g.isEmergency)
+  const emergencyFund = goalsWithProgress.find((g: { isEmergency: boolean }) => g.isEmergency)
   if (emergencyFund) {
     const progress = emergencyFund.progress
     if (progress < 100) {
@@ -298,7 +298,7 @@ function calculateHealthScore(data: Awaited<ReturnType<typeof gatherFinancialDat
   // 4. Debt-to-Income Ratio (max -20 points)
   // Monthly loan payments as % of income
   if (summary.totalIncome > 0 && loansSummary.length > 0) {
-    const totalMonthlyPayments = loansSummary.reduce((sum, l) => sum + l.monthlyPayment, 0)
+    const totalMonthlyPayments = loansSummary.reduce((sum: number, l: { monthlyPayment: number }) => sum + l.monthlyPayment, 0)
     const debtRatio = (totalMonthlyPayments / summary.totalIncome) * 100
     if (debtRatio > 30) {
       const deduction = Math.min(20, (debtRatio - 30) * 0.5)
@@ -435,21 +435,21 @@ NOUZOVÝ FOND:
 - Cílová částka: ${data.emergencyFund.effectiveTarget.toLocaleString('cs-CZ')} Kč${data.emergencyFund.userDefinedTarget ? ' (uživatelem definováno)' : ` (${data.emergencyFund.monthsOfExpenses}× měsíční výdaje)`}
 
 VÝDAJE PO KATEGORIÍCH:
-${data.expensesByCategory.map((e) => `- ${e.category}: ${e.amount.toLocaleString('cs-CZ')} Kč`).join('\n')}
+${data.expensesByCategory.map((e: { category: string; amount: number }) => `- ${e.category}: ${e.amount.toLocaleString('cs-CZ')} Kč`).join('\n')}
 
 3MĚSÍČNÍ PRŮMĚRY (pro detekci anomálií):
 ${Object.entries(data.categoryAverages).map(([cat, avg]) => `- ${cat}: ${Math.round(avg).toLocaleString('cs-CZ')} Kč`).join('\n')}
 
 PŘÍJMY:
-${data.incomeBySource.map((i) => `- ${i.source}: ${i.amount.toLocaleString('cs-CZ')} Kč`).join('\n')}
+${data.incomeBySource.map((i: { source: string; amount: number }) => `- ${i.source}: ${i.amount.toLocaleString('cs-CZ')} Kč`).join('\n')}
 
 SPOŘICÍ CÍLE:
-${data.goalsWithProgress.map((g) =>
+${data.goalsWithProgress.map((g: { name: string; isEmergency: boolean; currentAmount: number; targetAmount: number | null; progress: number }) =>
   `- ${g.name}${g.isEmergency ? ' (NOUZOVÝ FOND)' : ''}: ${g.currentAmount.toLocaleString('cs-CZ')} / ${g.targetAmount?.toLocaleString('cs-CZ') || 'bez cíle'} Kč (${g.progress.toFixed(0)}%)`
 ).join('\n')}
 
 INVESTICE:
-${data.investmentProjections.map((i) => {
+${data.investmentProjections.map((i: { name: string; currentMonthly: number; totalInvested?: number; projectedValue?: number; years?: number; annualRate?: number }) => {
   if ('projectedValue' in i && i.projectedValue) {
     return `- ${i.name}: měsíčně ${i.currentMonthly.toLocaleString('cs-CZ')} Kč, celkem investováno ${i.totalInvested?.toLocaleString('cs-CZ')} Kč, projekce za ${i.years} let: ${i.projectedValue.toLocaleString('cs-CZ')} Kč (${((i.annualRate || 0) * 100).toFixed(0)}% p.a.)`
   }
@@ -457,7 +457,7 @@ ${data.investmentProjections.map((i) => {
 }).join('\n') || 'Žádné investice'}
 
 AKTIVNÍ PŮJČKY:
-${data.loansSummary.length > 0 ? data.loansSummary.map((l) =>
+${data.loansSummary.length > 0 ? data.loansSummary.map((l: { name: string; remainingAmount: number; monthlyPayment: number; paidOffPercent: number; monthsRemaining: number }) =>
   `- ${l.name}: zbývá ${l.remainingAmount.toLocaleString('cs-CZ')} Kč, splátka ${l.monthlyPayment.toLocaleString('cs-CZ')} Kč/měs, splaceno ${l.paidOffPercent.toFixed(0)}%, zbývá ${l.monthsRemaining} měsíců`
 ).join('\n') : 'Žádné aktivní půjčky'}
 
@@ -476,7 +476,7 @@ function generateDemoInsights(data: Awaited<ReturnType<typeof gatherFinancialDat
   // Calculate key metrics
   const savingsRate = summary.savingsRate
   const hasDeficit = summary.balance < 0
-  const emergencyFund = goalsWithProgress.find(g => g.isEmergency)
+  const emergencyFund = goalsWithProgress.find((g: { isEmergency: boolean }) => g.isEmergency)
   const emergencyFundProgress = emergencyFund?.progress || 0
 
   // Generate narrative based on data
@@ -508,7 +508,7 @@ function generateDemoInsights(data: Awaited<ReturnType<typeof gatherFinancialDat
     warnings.push(`Nouzový fond je na ${emergencyFundProgress.toFixed(0)} % cílové částky - prioritizujte jeho doplnění`)
   }
   if (loansSummary.length > 0) {
-    const totalLoanPayments = loansSummary.reduce((sum, l) => sum + l.monthlyPayment, 0)
+    const totalLoanPayments = loansSummary.reduce((sum: number, l: { monthlyPayment: number }) => sum + l.monthlyPayment, 0)
     const loanRatio = (totalLoanPayments / summary.totalIncome) * 100
     if (loanRatio > 30) {
       warnings.push(`Splátky půjček tvoří ${loanRatio.toFixed(0)} % příjmů - zvažte refinancování`)
@@ -535,7 +535,7 @@ function generateDemoInsights(data: Awaited<ReturnType<typeof gatherFinancialDat
   // Generate category insights
   const categories: Record<string, { insight: string; trend: 'up' | 'down' | 'stable'; benchmarkComparison?: string }> = {}
 
-  const foodExpense = expensesByCategory.find(e => e.category === 'Potraviny')
+  const foodExpense = expensesByCategory.find((e: { category: string; amount: number }) => e.category === 'Potraviny')
   if (foodExpense) {
     const perCapita = foodExpense.amount / household.totalMembers
     const benchmark = 3500
@@ -547,7 +547,7 @@ function generateDemoInsights(data: Awaited<ReturnType<typeof gatherFinancialDat
     }
   }
 
-  const housingExpense = expensesByCategory.find(e => e.category === 'Bydlení')
+  const housingExpense = expensesByCategory.find((e: { category: string; amount: number }) => e.category === 'Bydlení')
   if (housingExpense && summary.totalIncome > 0) {
     const housingRatio = (housingExpense.amount / summary.totalIncome) * 100
     categories['Bydlení'] = {

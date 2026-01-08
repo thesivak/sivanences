@@ -16,7 +16,7 @@ export async function POST(
     }
 
     // Create transaction and update goal in a transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: typeof prisma) => {
       const transaction = await tx.fundTransaction.create({
         data: {
           savingGoalId: id,

@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     // Create a map of all months with data
     const monthlyData: Record<string, { income: number; expenses: number }> = {}
 
-    incomes.forEach((i) => {
+    incomes.forEach((i: { year: number; month: number; _sum: { amount: number | null } }) => {
       const key = `${i.year}-${i.month}`
       if (!monthlyData[key]) {
         monthlyData[key] = { income: 0, expenses: 0 }
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
       monthlyData[key].income = i._sum.amount || 0
     })
 
-    expenses.forEach((e) => {
+    expenses.forEach((e: { year: number; month: number; _sum: { amount: number | null } }) => {
       const key = `${e.year}-${e.month}`
       if (!monthlyData[key]) {
         monthlyData[key] = { income: 0, expenses: 0 }

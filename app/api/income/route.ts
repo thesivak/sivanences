@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     return successResponse({
       year,
       month,
-      sources: sources.map((src) => ({
+      sources: sources.map((src: { id: string; name: string; order: number; incomes: unknown[] }) => ({
         id: src.id,
         name: src.name,
         order: src.order,

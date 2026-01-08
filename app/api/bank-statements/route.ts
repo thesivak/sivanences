@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     })
 
     // Parse the JSON parsedData field
-    const result = uploads.map(upload => ({
+    const result = uploads.map((upload: { parsedData: string | null; [key: string]: unknown }) => ({
       ...upload,
       parsedData: upload.parsedData ? JSON.parse(upload.parsedData) as ParsedBankStatement : null,
     }))
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       buffer,
       categories,
       incomeSources,
-      userAccounts.map(a => a.accountNumber)
+      userAccounts.map((a: { accountNumber: string }) => a.accountNumber)
     )
 
     // Determine statement period (MM/YYYY)

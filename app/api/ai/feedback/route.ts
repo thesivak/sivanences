@@ -43,7 +43,7 @@ export async function GET() {
       suggestion: { positive: 0, negative: 0 },
     }
 
-    feedback.forEach((f) => {
+    feedback.forEach((f: { insightType: string; isPositive: boolean }) => {
       const type = f.insightType as keyof typeof stats
       if (stats[type]) {
         if (f.isPositive) {

@@ -75,15 +75,15 @@ export async function GET(request: Request) {
     })
 
     // Calculate totals
-    const totalExpenses = categories.reduce((sum, cat) => {
+    const totalExpenses = categories.reduce((sum: number, cat: { expenses: { amount: number }[] }) => {
       return sum + (cat.expenses[0]?.amount || 0)
     }, 0)
 
-    const totalIncome = incomeSources.reduce((sum, src) => {
+    const totalIncome = incomeSources.reduce((sum: number, src: { incomes: { amount: number }[] }) => {
       return sum + (src.incomes[0]?.amount || 0)
     }, 0)
 
-    const totalInvestments = investmentTypes.reduce((sum, type) => {
+    const totalInvestments = investmentTypes.reduce((sum: number, type: { investments: { amount: number }[] }) => {
       return sum + (type.investments[0]?.amount || 0)
     }, 0)
 
@@ -121,7 +121,7 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'desc' },
     })
 
-    const activeLoans = activeLoansRaw.map(loan => {
+    const activeLoans = activeLoansRaw.map((loan: { originalAmount: number; interestRate: number; termMonths: number; startDate: Date; monthlyPayment: number; [key: string]: unknown }) => {
       const { remainingBalance, paymentsMade, monthsRemaining } = calculateCurrentBalance(
         loan.originalAmount,
         loan.interestRate,
@@ -138,12 +138,12 @@ export async function GET(request: Request) {
       }
     })
 
-    const totalLoanPayments = activeLoans.reduce((sum, loan) => sum + loan.monthlyPayment, 0)
-    const totalLoanBalance = activeLoans.reduce((sum, loan) => sum + loan.calculatedBalance, 0)
+    const totalLoanPayments = activeLoans.reduce((sum: number, loan: { monthlyPayment: number }) => sum + loan.monthlyPayment, 0)
+    const totalLoanBalance = activeLoans.reduce((sum: number, loan: { calculatedBalance: number }) => sum + loan.calculatedBalance, 0)
 
     // Calculate previous month loan payments (loans that were active in previous month)
     const prevMonthDate = new Date(prevYear, prevMonth - 1, 1)
-    const prevMonthLoanPayments = activeLoansRaw.reduce((sum, loan) => {
+    const prevMonthLoanPayments = activeLoansRaw.reduce((sum: number, loan: { startDate: Date; monthlyPayment: number }) => {
       const startDate = new Date(loan.startDate)
       // Only count if loan had started by the previous month
       if (startDate <= prevMonthDate) {
@@ -161,7 +161,7 @@ export async function GET(request: Request) {
     })
 
     const avgMonthlyExpenses =
-      last3MonthsExpenses.reduce((sum, m) => sum + (m._sum.amount || 0), 0) /
+      last3MonthsExpenses.reduce((sum: number, m: { _sum: { amount: number | null } }) => sum + (m._sum.amount || 0), 0) /
       Math.max(last3MonthsExpenses.length, 1)
 
     return NextResponse.json({
@@ -180,26 +180,26 @@ export async function GET(request: Request) {
         totalInvestments: prevInvestments._sum.amount || 0,
         totalLoanPayments: prevMonthLoanPayments,
       },
-      categories: categories.map((cat) => ({
+      categories: categories.map((cat: { id: string; name: string; icon: string; order: number; expenses: unknown[] }) => ({
         id: cat.id,
         name: cat.name,
         icon: cat.icon,
         order: cat.order,
         expense: cat.expenses[0] || null,
       })),
-      incomeSources: incomeSources.map((src) => ({
+      incomeSources: incomeSources.map((src: { id: string; name: string; order: number; incomes: unknown[] }) => ({
         id: src.id,
         name: src.name,
         order: src.order,
         income: src.incomes[0] || null,
       })),
-      investmentTypes: investmentTypes.map((type) => ({
+      investmentTypes: investmentTypes.map((type: { id: string; name: string; order: number; investments: unknown[] }) => ({
         id: type.id,
         name: type.name,
         order: type.order,
         investment: type.investments[0] || null,
       })),
-      savingGoals: savingGoals.map((goal) => {
+      savingGoals: savingGoals.map((goal: { id: string; name: string; currentAmount: number; targetAmount: number | null; isEmergency: boolean; order: number }) => {
         // For emergency fund, use household settings target if available
         const effectiveTarget = goal.isEmergency && householdSettings?.emergencyFundTarget
           ? householdSettings.emergencyFundTarget

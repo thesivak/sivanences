@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     return successResponse({
       year,
       month,
-      categories: categories.map((cat) => ({
+      categories: categories.map((cat: { id: string; name: string; icon: string; order: number; expenses: unknown[] }) => ({
         id: cat.id,
         name: cat.name,
         icon: cat.icon,

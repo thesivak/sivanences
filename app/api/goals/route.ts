@@ -13,7 +13,7 @@ export async function GET() {
     })
 
     const avgMonthlyExpenses =
-      last3MonthsExpenses.reduce((sum, m) => sum + (m._sum.amount || 0), 0) /
+      last3MonthsExpenses.reduce((sum: number, m: { _sum: { amount: number | null } }) => sum + (m._sum.amount || 0), 0) /
       Math.max(last3MonthsExpenses.length, 1)
 
     // Fetch household settings for emergency fund target
@@ -35,7 +35,7 @@ export async function GET() {
     const emergencyFundMonths = householdSettings?.emergencyFundMonths ?? 3
 
     return NextResponse.json({
-      goals: goals.map((goal) => {
+      goals: goals.map((goal: { id: string; name: string; targetAmount: number | null; currentAmount: number; isEmergency: boolean; order: number; transactions: unknown[] }) => {
         // For emergency fund, use household settings target if available
         const effectiveTarget = goal.isEmergency && householdSettings?.emergencyFundTarget
           ? householdSettings.emergencyFundTarget

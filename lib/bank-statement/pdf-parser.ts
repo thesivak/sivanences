@@ -14,20 +14,19 @@ export interface PDFParseResult {
  * Extract text content from a PDF buffer
  */
 export async function extractTextFromPDF(buffer: Buffer): Promise<PDFParseResult> {
-  const parser = new PDFParse()
-  const result = await parser.loadPDF(buffer)
-  const pages = await result.getAllPages()
+  const parser = new PDFParse({ data: buffer })
 
-  // Combine text from all pages
-  const text = pages.map(page => page.text).join('\n')
+  // Get info and text (these methods handle loading internally)
+  const info = await parser.getInfo()
+  const textResult = await parser.getText()
 
   return {
-    text,
-    numPages: pages.length,
+    text: textResult.text,
+    numPages: info.total || 1,
     info: {
-      title: result.metadata?.Title,
-      author: result.metadata?.Author,
-      creationDate: result.metadata?.CreationDate,
+      title: info.info?.Title,
+      author: info.info?.Author,
+      creationDate: info.info?.CreationDate,
     },
   }
 }
