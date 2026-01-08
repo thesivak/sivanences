@@ -466,7 +466,7 @@ ${!data.hasHistoricalData ? '\nPOZNÁMKA: Omezená historická data - zaměř se
 Vrať analýzu jako JSON dle specifikované struktury.`
 }
 
-// Generate demo insights when OpenAI is not configured
+// Generate demo insights when Claude CLI is not available
 function generateDemoInsights(data: Awaited<ReturnType<typeof gatherFinancialData>>) {
   const { summary, expensesByCategory, goalsWithProgress, loansSummary, household } = data
 
