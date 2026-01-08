@@ -1,4 +1,7 @@
-import { PDFParse } from 'pdf-parse'
+import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs'
+
+// Disable worker to avoid issues in Next.js server environment
+pdfjs.GlobalWorkerOptions.workerSrc = ''
 
 export interface PDFParseResult {
   text: string
@@ -14,19 +17,37 @@ export interface PDFParseResult {
  * Extract text content from a PDF buffer
  */
 export async function extractTextFromPDF(buffer: Buffer): Promise<PDFParseResult> {
-  const parser = new PDFParse({ data: buffer })
+  // Load the PDF document with worker disabled
+  const loadingTask = pdfjs.getDocument({
+    data: new Uint8Array(buffer),
+    useWorkerFetch: false,
+    isEvalSupported: false,
+    useSystemFonts: true,
+  })
 
-  // Get info and text (these methods handle loading internally)
-  const info = await parser.getInfo()
-  const textResult = await parser.getText()
+  const pdf = await loadingTask.promise
+  const metadata = await pdf.getMetadata()
+
+  // Extract text from all pages
+  const textParts: string[] = []
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i)
+    const textContent = await page.getTextContent()
+    const pageText = textContent.items
+      .map((item) => ('str' in item ? item.str : ''))
+      .join(' ')
+    textParts.push(pageText)
+  }
+
+  const info = metadata.info as Record<string, unknown> | null
 
   return {
-    text: textResult.text,
-    numPages: info.total || 1,
+    text: textParts.join('\n'),
+    numPages: pdf.numPages,
     info: {
-      title: info.info?.Title,
-      author: info.info?.Author,
-      creationDate: info.info?.CreationDate,
+      title: typeof info?.Title === 'string' ? info.Title : undefined,
+      author: typeof info?.Author === 'string' ? info.Author : undefined,
+      creationDate: typeof info?.CreationDate === 'string' ? info.CreationDate : undefined,
     },
   }
 }
